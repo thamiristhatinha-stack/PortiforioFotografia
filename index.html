@@ -1,296 +1,388 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thamiris & Felipe | Fotografia</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Lato', sans-serif; }
-        .font-serif-display { font-family: 'Cormorant Garamond', serif; }
-        .grayscale-img { filter: grayscale(100%); transition: all 0.8s ease; }
-        .group:hover .grayscale-img { filter: grayscale(0%); transform: scale(1.05); }
-        .hero-img { filter: brightness(0.6); animation: slowZoom 30s infinite alternate ease-in-out; }
-        @keyframes slowZoom { from { transform: scale(1); } to { transform: scale(1.1); } }
-        [v-cloak] { display: none; }
-    </style>
-</head>
-<body class="bg-stone-50 text-stone-800">
+import React, { useState, useEffect } from 'react';
+import { 
+  Camera, Mail, Instagram, Menu, X, Heart, 
+  MessageSquare, Plus, Trash2, Lock, LogOut, 
+  ChevronDown, Image as ImageIcon, Loader2,
+  Edit2, Settings, Map as MapIcon, Eye,
+  Aperture, Focus, Phone
+} from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, collection, addDoc, onSnapshot, 
+  deleteDoc, doc, updateDoc, query 
+} from 'firebase/firestore';
+import { 
+  getAuth, signInAnonymously, onAuthStateChanged, 
+  signInWithCustomToken, signOut 
+} from 'firebase/auth';
 
-    <div id="root"></div>
+// Configuração Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDIwpQtKwxy4AWjsPIQ8t0IieWEmyBjtwY",
+  authDomain: "sitefotografia-cfa61.firebaseapp.com",
+  projectId: "sitefotografia-cfa61",
+  storageBucket: "sitefotografia-cfa61.firebasestorage.app",
+  messagingSenderId: "849725176102",
+  appId: "1:849725176102:web:0b5e6106fe69ce4c6429e7",
+};
 
-    <!-- React and Libraries -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'site-fotografia-thamiris';
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const App = () => {
+  const [user, setUser] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [ensaios, setEnsaios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Estados de edição e formulário
+  const [editMode, setEditMode] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [newEnsaio, setNewEnsaio] = useState({ title: '', url: '', category: 'Casamento' });
+  const [formData, setFormData] = useState({ nome: '', email: '', mensagem: '' });
 
-        window.FirebaseLib = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, doc, setDoc, onSnapshot };
-    </script>
+  const fotoTrajetoria = "https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg";
+  const whatsappNumber = "5511993453280";
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          try { await signInWithCustomToken(auth, __initial_auth_token); } 
+          catch (e) { await signInAnonymously(auth); }
+        } else { await signInAnonymously(auth); }
+      } catch (err) { console.error("Erro Auth:", err); }
+    };
+    initAuth();
+    const unsubAuth = onAuthStateChanged(auth, setUser);
+    return () => unsubAuth();
+  }, []);
 
-        // --- ÍCONES SVG INLINE (Para evitar erro de carregamento de biblioteca externa) ---
-        const IconMenu = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>;
-        const IconX = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
-        const IconLock = ({size=12}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+  useEffect(() => {
+    if (!user) return;
+    const q = collection(db, 'artifacts', appId, 'public', 'data', 'ensaios');
+    const unsubSnap = onSnapshot(q, (snapshot) => {
+      setEnsaios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, () => setLoading(false));
+    return () => unsubSnap();
+  }, [user]);
 
-        // --- CONFIGURAÇÃO FIREBASE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDIwpQtKwxy4AWjsPIQ8t0IieWEmyBjtwY",
-            authDomain: "sitefotografia-cfa61.firebaseapp.com",
-            projectId: "sitefotografia-cfa61",
-            storageBucket: "sitefotografia-cfa61.firebasestorage.app",
-            messagingSenderId: "849725176102",
-            appId: "1:849725176102:web:0b5e6106fe69ce4c6429e7"
-        };
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-        const defaultData = {
-            hero: {
-                title: "A Essência do Momento",
-                subtitle: "Onde a luz encontra a memória",
-                bgImage: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=3840&auto=format&fit=crop" 
-            },
-            sobre: {
-                titulo: "Nossa Trajetória",
-                texto: "Somos Thamiris Souza e Felipe Laia...",
-                imagem: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=2000&auto=format&fit=crop"
-            },
-            contato: {
-                email: "contato@exemplo.com",
-                instagram: "thamirisefelipe",
-                whatsapp: "5511993453280"
-            },
-            portfolio: [
-                { 
-                    id: '1', 
-                    category: 'Casamentos', 
-                    src: 'https://i.postimg.cc/MnMXxPZX/IMG-8649.jpg', 
-                    title: 'Isabela - 11 anos',
-                    isGallery: true,
-                    photos: ['https://i.postimg.cc/MnMXxPZX/IMG-8649.jpg', 'https://i.postimg.cc/YjWXGkXr/IMG-8689.jpg']
-                }
-            ]
-        };
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    if (password === 'thamiris123') { 
+      setIsAuthorized(true);
+      setEditMode(true);
+      setIsAdminOpen(false);
+      setPassword('');
+    } else { alert('Senha incorreta.'); }
+  };
 
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [siteData, setSiteData] = useState(defaultData);
-            const [isAdminMode, setIsAdminMode] = useState(false);
-            const [isLoginOpen, setIsLoginOpen] = useState(false);
-            const [password, setPassword] = useState('');
-            const [loading, setLoading] = useState(true);
-            const [isMenuOpen, setIsMenuOpen] = useState(false);
-            const [modalData, setModalData] = useState(null);
-            const [scrolled, setScrolled] = useState(false);
+  const addEnsaio = async (e) => {
+    e.preventDefault();
+    setUploading(true);
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ensaios'), {
+        ...newEnsaio,
+        createdAt: new Date().toISOString()
+      });
+      setNewEnsaio({ title: '', url: '', category: 'Casamento' });
+    } catch (err) { alert('Erro ao salvar.'); }
+    finally { setUploading(false); }
+  };
 
-            useEffect(() => {
-                if (!window.FirebaseLib) return;
-                const { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, doc, onSnapshot, setDoc } = window.FirebaseLib;
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                const appId = "sitefotografia-cfa61";
+  const deleteEnsaio = async (id) => {
+    if (window.confirm('Excluir este trabalho do portfólio?')) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ensaios', id));
+    }
+  };
 
-                signInAnonymously(auth).catch(console.error);
-                
-                onAuthStateChanged(auth, (u) => {
-                    setUser(u);
-                    if (u) {
-                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'content', 'main');
-                        onSnapshot(docRef, (docSnap) => {
-                            if (docSnap.exists()) {
-                                setSiteData(docSnap.data());
-                            } else {
-                                setDoc(docRef, defaultData);
-                            }
-                            setLoading(false);
-                        }, (error) => {
-                            console.error("Erro no Firestore:", error);
-                            setLoading(false);
-                        });
-                    }
-                });
+  const sendWhatsApp = (e) => {
+    e.preventDefault();
+    const text = `Olá! Meu nome é ${formData.nome}. Gostaria de solicitar um orçamento.\n\nE-mail: ${formData.email}\nSobre o sonho: ${formData.mensagem}`;
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
-                const handleScroll = () => setScrolled(window.scrollY > 50);
-                window.addEventListener('scroll', handleScroll);
-                return () => window.removeEventListener('scroll', handleScroll);
-            }, []);
+  return (
+    <div className={`min-h-screen bg-white text-stone-900 font-sans selection:bg-stone-200 ${editMode ? 'pt-12' : ''}`}>
+      
+      {/* Barra de Editor */}
+      {isAuthorized && (
+        <div className="fixed top-0 w-full bg-stone-900 text-white h-12 z-[100] flex items-center justify-between px-6 text-[10px] uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-2 text-amber-400"><Settings size={14} /> Modo Editor Ativo</span>
+            <div className="h-4 w-[1px] bg-white/20"></div>
+            <button onClick={() => setEditMode(!editMode)} className="hover:text-amber-400 transition-colors flex items-center gap-2">
+              {editMode ? <><Eye size={14} /> Ver Visual do Site</> : <><Edit2 size={14} /> Voltar a Editar</>}
+            </button>
+          </div>
+          <button onClick={() => {setIsAuthorized(false); setEditMode(false);}} className="hover:text-red-400 transition-colors flex items-center gap-2">
+            <LogOut size={14} /> Sair do Editor
+          </button>
+        </div>
+      )}
 
-            const handleLogin = (e) => {
-                e.preventDefault();
-                if (password === '290611') {
-                    setIsAdminMode(true);
-                    setIsLoginOpen(false);
-                    setPassword('');
-                } else {
-                    alert("Senha incorreta.");
-                }
-            };
+      {/* Navegação */}
+      <nav className={`fixed w-full z-50 transition-all duration-700 ${scrolled ? 'bg-white/95 backdrop-blur-md py-4 shadow-sm' : 'bg-transparent py-10'}`}>
+        <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
+          <div className={`text-xl md:text-2xl font-light tracking-[0.4em] uppercase transition-colors duration-500 ${scrolled ? 'text-stone-800' : 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>
+            Souza <span className={`font-serif italic ${scrolled ? 'text-stone-400' : 'text-stone-200'}`}>&</span> Laia
+          </div>
+          
+          <div className="hidden md:flex items-center space-x-12">
+            {['Início', 'Portfólio', 'Trajetória', 'Orçamento'].map((item) => (
+              <a key={item} href={`#${item.toLowerCase()}`} className={`text-[10px] uppercase tracking-[0.2em] transition-colors duration-500 font-medium ${scrolled ? 'text-stone-600 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>{item}</a>
+            ))}
+            
+            <div className="flex items-center gap-6 ml-4">
+              <a href="https://instagram.com" target="_blank" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>
+                <Instagram size={18} />
+              </a>
+              <a href={`https://wa.me/${whatsappNumber}`} target="_blank" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>
+                <Phone size={18} />
+              </a>
+              {!isAuthorized && (
+                <button onClick={() => setIsAdminOpen(true)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                  <Lock size={16} className={scrolled ? "text-stone-400" : "text-white/50"} />
+                </button>
+              )}
+            </div>
+          </div>
 
-            const saveData = async () => {
-                const { getFirestore, doc, setDoc } = window.FirebaseLib;
-                const db = getFirestore();
-                try {
-                    await setDoc(doc(db, 'artifacts', 'sitefotografia-cfa61', 'public', 'data', 'content', 'main'), siteData);
-                    alert("Salvo com sucesso!");
-                } catch (err) {
-                    alert("Erro ao salvar.");
-                }
-            };
+          <button className={`md:hidden ${scrolled ? 'text-stone-900' : 'text-white drop-shadow-md'}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </nav>
 
-            const scrollToSection = (id) => {
-                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-                setIsMenuOpen(false);
-            };
+      {/* Capa */}
+      <section id="início" className="h-screen relative flex items-center justify-center overflow-hidden bg-black">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=3840&auto=format&fit=crop" 
+            alt="Mãos segurando uma câmera Canon" 
+            className="w-full h-full object-cover opacity-80 scale-100 animate-[subtle-zoom_40s_infinite_alternate]"
+          />
+          {/* Overlay escuro reforçado para melhor contraste do menu */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/90"></div>
+        </div>
+        
+        <div className="relative z-10 text-center px-6 max-w-5xl">
+          <div className="mb-6 overflow-hidden">
+            <span className="block text-white/90 text-[10px] md:text-xs uppercase tracking-[0.8em] animate-slide-up font-medium drop-shadow-lg">Thamiris Souza & Felipe Laia</span>
+          </div>
+          <h1 className="text-5xl md:text-[110px] font-serif text-white leading-none mb-12 tracking-tighter drop-shadow-2xl">
+            Eternizando <br/> <span className="italic font-light opacity-95">Sentimentos</span>
+          </h1>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+            <a href="#portfolio" className="group relative overflow-hidden bg-white text-stone-900 px-14 py-6 text-[10px] uppercase tracking-[0.4em] transition-all shadow-xl">
+              <span className="relative z-10 font-bold">Ver Portfólio</span>
+              <div className="absolute inset-0 bg-stone-200 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+            </a>
+            <a href="#orçamento" className="border-2 border-white/60 text-white px-14 py-6 text-[10px] uppercase tracking-[0.4em] hover:bg-white/20 transition-all backdrop-blur-sm shadow-2xl">
+              Solicitar Orçamento
+            </a>
+          </div>
+        </div>
 
-            if (loading || !siteData) {
-                return <div className="h-screen flex items-center justify-center bg-stone-900 text-white font-serif-display italic tracking-[0.2em]">Carregando Memórias...</div>;
-            }
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/50">
+            <ChevronDown size={24} />
+        </div>
+      </section>
 
-            return (
-                <div className="min-h-screen">
-                    {/* BARRA ADMIN */}
-                    {isAdminMode && (
-                        <div className="fixed bottom-0 left-0 right-0 bg-stone-900 text-white z-[200] p-4 flex justify-between items-center shadow-2xl border-t border-stone-700">
-                            <button onClick={saveData} className="bg-white text-stone-900 px-6 py-2 rounded-sm text-[10px] font-bold uppercase">Salvar no Banco</button>
-                            <button onClick={() => setIsAdminMode(false)} className="text-stone-400 text-[10px] uppercase">Sair</button>
-                        </div>
-                    )}
+      {/* Galeria */}
+      <section id="portfolio" className="py-32 px-8 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
+          <div className="max-w-xl">
+            <span className="text-stone-400 text-xs uppercase tracking-[0.4em]">Galeria de Sonhos</span>
+            <h2 className="text-5xl font-serif mt-4 italic">Nossa Curadoria</h2>
+          </div>
+          {editMode && (
+            <div className="bg-stone-50 border border-stone-100 p-8 rounded-sm w-full md:w-auto shadow-sm animate-fade-in">
+              <h4 className="text-[10px] uppercase tracking-widest mb-6 font-bold flex items-center gap-2">
+                <Plus size={14} /> Adicionar Novo Trabalho
+              </h4>
+              <form onSubmit={addEnsaio} className="flex flex-col md:flex-row gap-4">
+                <input required placeholder="TÍTULO" className="bg-white border border-stone-200 p-3 text-[10px] uppercase tracking-widest outline-none focus:border-stone-900" value={newEnsaio.title} onChange={(e) => setNewEnsaio({...newEnsaio, title: e.target.value})} />
+                <input required placeholder="URL DA FOTO (POSTIMG)" className="bg-white border border-stone-200 p-3 text-[10px] outline-none focus:border-stone-900" value={newEnsaio.url} onChange={(e) => setNewEnsaio({...newEnsaio, url: e.target.value})} />
+                <select className="bg-white border border-stone-200 p-3 text-[10px] uppercase outline-none" value={newEnsaio.category} onChange={(e) => setNewEnsaio({...newEnsaio, category: e.target.value})}>
+                  <option>Casamento</option>
+                  <option>Ensaio Casal</option>
+                  <option>Individual</option>
+                  <option>Evento</option>
+                </select>
+                <button disabled={uploading} className="bg-stone-900 text-white px-6 py-3 text-[10px] uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50">
+                  {uploading ? 'Salvando...' : 'Publicar'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
 
-                    {/* NAV */}
-                    <nav className={`fixed w-full z-50 transition-all duration-500 ${scrolled || isMenuOpen ? 'bg-white py-4 shadow-md text-stone-800' : 'bg-transparent py-6 text-white'}`}>
-                        <div className="container mx-auto px-6 flex justify-between items-center">
-                            <div className="text-xl font-serif-display tracking-widest font-semibold uppercase cursor-pointer" onClick={() => scrollToSection('home')}>Thamiris & Felipe</div>
-                            <div className="hidden md:flex space-x-12 text-[10px] tracking-[0.3em] uppercase">
-                                <button onClick={() => scrollToSection('portfolio')} className="hover:opacity-50">Portfólio</button>
-                                <button onClick={() => scrollToSection('sobre')} className="hover:opacity-50">Sobre</button>
-                                <button onClick={() => scrollToSection('contato')} className="hover:opacity-50">Contato</button>
-                            </div>
-                            <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                                {isMenuOpen ? <IconX /> : <IconMenu />}
-                            </button>
-                        </div>
-                        {/* Mobile Menu */}
-                        {isMenuOpen && (
-                            <div className="md:hidden bg-white text-stone-800 absolute top-full left-0 w-full shadow-lg flex flex-col p-6 space-y-4 text-[10px] tracking-widest uppercase text-center border-t border-stone-100">
-                                <button onClick={() => scrollToSection('portfolio')}>Portfólio</button>
-                                <button onClick={() => scrollToSection('sobre')}>Sobre</button>
-                                <button onClick={() => scrollToSection('contato')}>Contato</button>
-                            </div>
-                        )}
-                    </nav>
+        {loading ? (
+          <div className="flex flex-col items-center py-32 opacity-20"><Loader2 className="animate-spin mb-4" /> <span className="text-[10px] tracking-widest uppercase">Carregando Galeria...</span></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20">
+            {ensaios.map((ensaio) => (
+              <div key={ensaio.id} className="group relative">
+                <div className="aspect-[4/5] overflow-hidden bg-stone-50 relative">
+                  <img src={ensaio.url} alt={ensaio.title} className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110" loading="lazy" />
+                  
+                  {editMode && (
+                    <div className="absolute top-4 right-4 flex gap-2 z-30">
+                      <button onClick={() => deleteEnsaio(ensaio.id)} className="p-3 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all scale-0 group-hover:scale-100">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
 
-                    {/* HERO */}
-                    <section id="home" className="relative h-screen flex items-center justify-center bg-stone-900 overflow-hidden">
-                        <img src={siteData.hero?.bgImage} className="absolute inset-0 w-full h-full object-cover hero-img opacity-60" />
-                        <div className="relative z-10 text-center text-white px-6">
-                            <p className="tracking-[0.6em] text-[10px] mb-8 uppercase">{siteData.hero?.subtitle}</p>
-                            <h1 className="font-serif-display text-6xl md:text-9xl mb-10 italic font-light">{siteData.hero?.title}</h1>
-                            <button onClick={() => scrollToSection('portfolio')} className="border border-white/80 px-10 py-4 text-[10px] tracking-widest uppercase hover:bg-white hover:text-stone-900 transition-all">Ver Portfólio</button>
-                        </div>
-                    </section>
-
-                    {/* PORTFOLIO */}
-                    <section id="portfolio" className="py-32 bg-white">
-                        <div className="container mx-auto px-6">
-                            <h2 className="font-serif-display text-5xl italic text-center mb-20">Portfólio</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                                {siteData.portfolio?.map(item => (
-                                    <div key={item.id} className="group cursor-pointer" onClick={() => setModalData({ item, currentIndex: 0 })}>
-                                        <div className="aspect-[16/10] overflow-hidden bg-stone-100">
-                                            <img src={item.src} className="w-full h-full object-cover grayscale-img" />
-                                        </div>
-                                        <div className="mt-4 border-b pb-4 flex justify-between items-end">
-                                            <div>
-                                                <span className="text-[9px] uppercase text-stone-400">{item.category}</span>
-                                                <p className="font-serif-display text-2xl italic">{item.title}</p>
-                                            </div>
-                                            <div className="text-stone-300">→</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* SOBRE */}
-                    <section id="sobre" className="py-32 bg-stone-50">
-                        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center gap-20">
-                            <div className="md:w-1/2">
-                                <img src={siteData.sobre?.imagem} className="w-full shadow-2xl grayscale-img" />
-                            </div>
-                            <div className="md:w-1/2 space-y-6">
-                                <h2 className="font-serif-display text-5xl italic">{siteData.sobre?.titulo}</h2>
-                                <p className="text-stone-600 leading-relaxed font-light whitespace-pre-line">{siteData.sobre?.texto}</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* CONTATO */}
-                    <section id="contato" className="py-32 bg-stone-900 text-white text-center">
-                        <div className="container mx-auto px-6 max-w-4xl">
-                            <h2 className="font-serif-display text-5xl italic mb-12">Vamos Conversar?</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest text-stone-500 mb-2">E-mail</p>
-                                    <a href={`mailto:${siteData.contato?.email}`} className="text-sm underline underline-offset-4">{siteData.contato?.email}</a>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest text-stone-500 mb-2">Instagram</p>
-                                    <a href={`https://instagram.com/${siteData.contato?.instagram?.replace('@','')}`} target="_blank" className="text-sm underline underline-offset-4">@{siteData.contato?.instagram?.replace('@','')}</a>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest text-stone-500 mb-2">WhatsApp</p>
-                                    <a href={`https://wa.me/${siteData.contato?.whatsapp}`} target="_blank" className="text-sm underline underline-offset-4">{siteData.contato?.whatsapp}</a>
-                                </div>
-                            </div>
-                            <button onClick={() => window.open(`https://wa.me/${siteData.contato?.whatsapp}`)} className="bg-white text-stone-900 px-12 py-5 text-[10px] font-bold uppercase tracking-widest hover:bg-stone-200 transition-all">Solicitar Orçamento</button>
-                        </div>
-                    </section>
-
-                    {/* FOOTER */}
-                    <footer className="py-12 bg-black text-stone-600 text-center">
-                        <p className="text-[9px] uppercase tracking-[0.4em] mb-4">© 2026 • Thamiris & Felipe</p>
-                        <button onClick={() => setIsLoginOpen(true)} className="opacity-20 hover:opacity-100 text-[8px] uppercase tracking-widest flex items-center gap-2 mx-auto justify-center"><IconLock /> Painel Admin</button>
-                    </footer>
-
-                    {/* MODAL LOGIN */}
-                    {isLoginOpen && (
-                        <div className="fixed inset-0 z-[250] bg-black/95 flex items-center justify-center p-4">
-                            <div className="bg-white p-12 max-w-sm w-full relative">
-                                <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 text-stone-400"><IconX size={20}/></button>
-                                <h3 className="font-serif-display text-2xl italic mb-8 text-center text-stone-900">Acesso Restrito</h3>
-                                <form onSubmit={handleLogin} className="space-y-6">
-                                    <input type="password" placeholder="Senha" className="w-full border-b p-3 outline-none" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
-                                    <button type="submit" className="w-full bg-stone-900 text-white p-4 text-[10px] font-bold uppercase tracking-widest">Entrar</button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* LIGHTBOX */}
-                    {modalData && (
-                        <div className="fixed inset-0 z-[100] bg-black/98 flex items-center justify-center p-4" onClick={() => setModalData(null)}>
-                            <img src={modalData.item.src} className="max-h-[90vh] max-w-full object-contain" />
-                            <button className="absolute top-10 right-10 text-white"><IconX size={40}/></button>
-                        </div>
-                    )}
+                  <div className="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 transition-all duration-700 flex flex-col justify-end p-10">
+                    <span className="text-white/60 text-[10px] uppercase tracking-[0.3em] mb-3">{ensaio.category}</span>
+                    <h3 className="text-white text-3xl font-serif italic">{ensaio.title}</h3>
+                  </div>
                 </div>
-            );
-        };
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+      {/* Trajetória */}
+      <section id="trajetória" className="py-32 bg-stone-50 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-8 flex flex-col lg:flex-row gap-24 items-center">
+          <div className="w-full lg:w-1/2 relative">
+             <div className="aspect-[3/4] rounded-sm overflow-hidden shadow-2xl transition-all duration-1000 ring-8 ring-white">
+                <img src={fotoTrajetoria} className="w-full h-full object-cover" alt="Thamiris e Felipe" />
+             </div>
+          </div>
+          <div className="w-full lg:w-1/2 space-y-8">
+            <span className="text-stone-400 text-[10px] uppercase tracking-[0.5em]">Thamiris Souza & Felipe Laia</span>
+            <h2 className="text-6xl font-serif leading-tight">Um só olhar, <br/>duas almas criativas.</h2>
+            <div className="space-y-6 text-stone-600 leading-relaxed text-lg font-light italic">
+              <p>"A fotografia nos uniu de uma forma profunda. Com uma única câmera em mãos, aprendemos que o olhar técnico do Felipe e a sensibilidade da Thamiris se completam em cada frame."</p>
+              <p className="not-italic text-base text-stone-500">O que começou como uma paixão compartilhada entre nós dois, transformou-se em nossa missão: capturar a essência das pessoas.</p>
+            </div>
+            <div className="pt-8 border-t border-stone-200 grid grid-cols-2 gap-8">
+              <div>
+                <h4 className="text-3xl font-serif">1</h4>
+                <p className="text-[10px] uppercase tracking-widest text-stone-400">Equipamento, Duas Visões</p>
+              </div>
+              <div>
+                <h4 className="text-3xl font-serif">∞</h4>
+                <p className="text-[10px] uppercase tracking-widest text-stone-400">Memórias Guardadas</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Orçamento */}
+      <section id="orçamento" className="py-32 bg-white px-8">
+        <div className="max-w-4xl mx-auto border border-stone-100 p-12 md:p-20 shadow-sm text-center">
+          <h2 className="text-4xl font-serif italic mb-16">Vamos conversar?</h2>
+          <form onSubmit={sendWhatsApp} className="space-y-10 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <input 
+                required
+                type="text" 
+                placeholder="NOME" 
+                className="w-full border-b border-stone-200 py-4 focus:border-stone-900 outline-none text-xs tracking-widest bg-transparent uppercase" 
+                value={formData.nome}
+                onChange={(e) => setFormData({...formData, nome: e.target.value})}
+              />
+              <input 
+                required
+                type="email" 
+                placeholder="E-MAIL" 
+                className="w-full border-b border-stone-200 py-4 focus:border-stone-900 outline-none text-xs tracking-widest bg-transparent uppercase" 
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+              />
+            </div>
+            <textarea 
+              required
+              placeholder="SOBRE O SEU SONHO" 
+              rows="4" 
+              className="w-full border-b border-stone-200 py-4 focus:border-stone-900 outline-none text-xs tracking-widest bg-transparent resize-none uppercase"
+              value={formData.mensagem}
+              onChange={(e) => setFormData({...formData, mensagem: e.target.value})}
+            ></textarea>
+            <button type="submit" className="w-full bg-stone-900 text-white py-6 text-[10px] uppercase tracking-[0.4em] hover:bg-stone-800 transition-all shadow-xl font-bold flex items-center justify-center gap-3">
+              <Phone size={14} /> Solicitar via WhatsApp
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <footer className="py-20 border-t border-stone-50 bg-stone-50 text-center">
+        <div className="text-2xl font-light tracking-[0.5em] uppercase mb-10 text-stone-800">Souza <span className="italic text-stone-400">&</span> Laia</div>
+        
+        <div className="flex justify-center gap-8 mb-10">
+          <a href="https://instagram.com" target="_blank" className="text-stone-400 hover:text-stone-900 transition-colors">
+            <Instagram size={24} />
+          </a>
+          <a href={`https://wa.me/${whatsappNumber}`} target="_blank" className="text-stone-400 hover:text-stone-900 transition-colors">
+            <Phone size={24} />
+          </a>
+        </div>
+
+        <p className="text-[10px] text-stone-300 tracking-[0.3em] uppercase">© 2024 SOUZA & LAIA ART PHOTOGRAPHY</p>
+      </footer>
+
+      {/* Modal Admin */}
+      {isAdminOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-stone-950/90 backdrop-blur-md">
+          <div className="bg-white w-full max-w-sm p-12 rounded-sm relative shadow-2xl">
+            <button onClick={() => setIsAdminOpen(false)} className="absolute top-6 right-6 text-stone-400 hover:text-stone-950"><X size={20} /></button>
+            <form onSubmit={handleAdminLogin} className="text-center space-y-8">
+              <div className="inline-block p-4 bg-stone-50 rounded-full mb-4"><Lock className="text-stone-300" /></div>
+              <h3 className="text-xl font-serif italic">Acesso ao Painel</h3>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="SENHA DE EDITOR"
+                className="w-full border border-stone-200 p-4 text-center outline-none focus:border-stone-900 text-xs tracking-widest"
+              />
+              <button className="w-full bg-stone-900 text-white py-4 text-[10px] uppercase tracking-[0.3em] hover:bg-stone-800 transition-colors font-bold">Entrar no Modo Editor</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style htm="true">{`
+        @keyframes subtle-zoom {
+          from { transform: scale(1); }
+          to { transform: scale(1.15); }
+        }
+        @keyframes slide-up {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-slide-up { animation: slide-up 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-fade-in { animation: fade-in 1.5s ease-out forwards; }
+      `}</style>
+
+    </div>
+  );
+};
+
+export default App;
+
