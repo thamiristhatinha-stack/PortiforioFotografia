@@ -49,6 +49,7 @@ const App = () => {
 
   const fotoTrajetoria = "https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg";
   const whatsappNumber = "5511993453280";
+  const instaUrl = "https://www.instagram.com/souzaelaia.artphotography/"; // URL de exemplo
 
   useEffect(() => {
     const initAuth = async () => {
@@ -138,20 +139,20 @@ const App = () => {
       {/* Navegação */}
       <nav className={`fixed w-full z-50 transition-all duration-700 ${scrolled ? 'bg-white/95 backdrop-blur-md py-4 shadow-sm' : 'bg-transparent py-10'}`}>
         <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
-          <div className={`text-xl md:text-2xl font-light tracking-[0.4em] uppercase transition-colors duration-500 ${scrolled ? 'text-stone-800' : 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>
-            Souza <span className={`font-serif italic ${scrolled ? 'text-stone-400' : 'text-stone-200'}`}>&</span> Laia
+          <div className={`text-xl md:text-2xl font-light tracking-[0.4em] uppercase transition-all duration-500 ${scrolled ? 'text-stone-800' : 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`}>
+            Souza <span className={`font-serif italic ${scrolled ? 'text-stone-400' : 'text-white opacity-80'}`}>&</span> Laia
           </div>
           
           <div className="hidden md:flex items-center space-x-12">
             {['Início', 'Portfólio', 'Trajetória', 'Orçamento'].map((item) => (
-              <a key={item} href={`#${item.toLowerCase()}`} className={`text-[10px] uppercase tracking-[0.2em] transition-colors duration-500 font-medium ${scrolled ? 'text-stone-600 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>{item}</a>
+              <a key={item} href={`#${item.toLowerCase()}`} className={`text-[10px] uppercase tracking-[0.2em] transition-all duration-500 font-semibold ${scrolled ? 'text-stone-600 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_10px_rgba(0,0,0,1)]'}`}>{item}</a>
             ))}
             
             <div className="flex items-center gap-6 ml-4">
-              <a href="https://instagram.com" target="_blank" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>
+              <a href={instaUrl} target="_blank" rel="noopener noreferrer" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_10px_rgba(0,0,0,1)]'}`}>
                 <Instagram size={18} />
               </a>
-              <a href={`https://wa.me/${whatsappNumber}`} target="_blank" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]'}`}>
+              <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_10px_rgba(0,0,0,1)]'}`}>
                 <Phone size={18} />
               </a>
               {!isAuthorized && (
@@ -162,7 +163,7 @@ const App = () => {
             </div>
           </div>
 
-          <button className={`md:hidden ${scrolled ? 'text-stone-900' : 'text-white drop-shadow-md'}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button className={`md:hidden ${scrolled ? 'text-stone-900' : 'text-white drop-shadow-lg'}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -176,8 +177,8 @@ const App = () => {
             alt="Mãos segurando uma câmera Canon" 
             className="w-full h-full object-cover opacity-80 scale-100 animate-[subtle-zoom_40s_infinite_alternate]"
           />
-          {/* Overlay escuro reforçado para melhor contraste do menu */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/90"></div>
+          {/* Overlay escuro reforçado no topo para leitura do menu */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90"></div>
         </div>
         
         <div className="relative z-10 text-center px-6 max-w-5xl">
@@ -192,7 +193,7 @@ const App = () => {
               <span className="relative z-10 font-bold">Ver Portfólio</span>
               <div className="absolute inset-0 bg-stone-200 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
             </a>
-            <a href="#orçamento" className="border-2 border-white/60 text-white px-14 py-6 text-[10px] uppercase tracking-[0.4em] hover:bg-white/20 transition-all backdrop-blur-sm shadow-2xl">
+            <a href="#orçamento" className="border-2 border-white/60 text-white px-14 py-6 text-[10px] uppercase tracking-[0.4em] hover:bg-white/20 transition-all backdrop-blur-sm shadow-2xl font-semibold">
               Solicitar Orçamento
             </a>
           </div>
@@ -217,14 +218,14 @@ const App = () => {
               </h4>
               <form onSubmit={addEnsaio} className="flex flex-col md:flex-row gap-4">
                 <input required placeholder="TÍTULO" className="bg-white border border-stone-200 p-3 text-[10px] uppercase tracking-widest outline-none focus:border-stone-900" value={newEnsaio.title} onChange={(e) => setNewEnsaio({...newEnsaio, title: e.target.value})} />
-                <input required placeholder="URL DA FOTO (POSTIMG)" className="bg-white border border-stone-200 p-3 text-[10px] outline-none focus:border-stone-900" value={newEnsaio.url} onChange={(e) => setNewEnsaio({...newEnsaio, url: e.target.value})} />
+                <input required placeholder="URL DA FOTO" className="bg-white border border-stone-200 p-3 text-[10px] outline-none focus:border-stone-900" value={newEnsaio.url} onChange={(e) => setNewEnsaio({...newEnsaio, url: e.target.value})} />
                 <select className="bg-white border border-stone-200 p-3 text-[10px] uppercase outline-none" value={newEnsaio.category} onChange={(e) => setNewEnsaio({...newEnsaio, category: e.target.value})}>
                   <option>Casamento</option>
                   <option>Ensaio Casal</option>
                   <option>Individual</option>
                   <option>Evento</option>
                 </select>
-                <button disabled={uploading} className="bg-stone-900 text-white px-6 py-3 text-[10px] uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50">
+                <button disabled={uploading} className="bg-stone-900 text-white px-6 py-3 text-[10px] uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50 font-bold">
                   {uploading ? 'Salvando...' : 'Publicar'}
                 </button>
               </form>
@@ -314,14 +315,14 @@ const App = () => {
             </div>
             <textarea 
               required
-              placeholder="SOBRE O SEU SONHO" 
+              placeholder="SOBRE O SEU SONHO (CONTE-NOS MAIS...)" 
               rows="4" 
               className="w-full border-b border-stone-200 py-4 focus:border-stone-900 outline-none text-xs tracking-widest bg-transparent resize-none uppercase"
               value={formData.mensagem}
               onChange={(e) => setFormData({...formData, mensagem: e.target.value})}
             ></textarea>
             <button type="submit" className="w-full bg-stone-900 text-white py-6 text-[10px] uppercase tracking-[0.4em] hover:bg-stone-800 transition-all shadow-xl font-bold flex items-center justify-center gap-3">
-              <Phone size={14} /> Solicitar via WhatsApp
+              <Phone size={14} /> Enviar Proposta via WhatsApp
             </button>
           </form>
         </div>
@@ -331,11 +332,11 @@ const App = () => {
         <div className="text-2xl font-light tracking-[0.5em] uppercase mb-10 text-stone-800">Souza <span className="italic text-stone-400">&</span> Laia</div>
         
         <div className="flex justify-center gap-8 mb-10">
-          <a href="https://instagram.com" target="_blank" className="text-stone-400 hover:text-stone-900 transition-colors">
-            <Instagram size={24} />
+          <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-stone-900 transition-colors flex items-center gap-2 text-[10px] uppercase tracking-widest">
+            <Instagram size={20} /> Instagram
           </a>
-          <a href={`https://wa.me/${whatsappNumber}`} target="_blank" className="text-stone-400 hover:text-stone-900 transition-colors">
-            <Phone size={24} />
+          <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-stone-900 transition-colors flex items-center gap-2 text-[10px] uppercase tracking-widest">
+            <Phone size={20} /> WhatsApp
           </a>
         </div>
 
@@ -385,4 +386,5 @@ const App = () => {
 };
 
 export default App;
+
 
