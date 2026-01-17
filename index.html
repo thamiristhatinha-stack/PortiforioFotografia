@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { 
   getAuth, signInAnonymously, onAuthStateChanged, 
-  signInWithCustomToken 
+  signInWithCustomToken, signOut 
 } from 'firebase/auth';
 
 // Configuração Firebase
@@ -52,29 +52,44 @@ export default function App() {
   const fotoCamera = "https://i.postimg.cc/dQdNwwg9/Canon-EOS-R100-by-Henry-Soderlund.jpg";
   const whatsappNumber = "5511993453280";
 
-  // Autenticação Corrigida (Regra 3 e Fix de Token Mismatch)
+  // Autenticação Robusta (Regra 3 com Fallback de Segurança)
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        // Tenta usar o token customizado se ele existir
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+      // 1. Verifica se já existe um token inicial
+      const hasInitialToken = typeof __initial_auth_token !== 'undefined' && __initial_auth_token;
+
+      if (hasInitialToken) {
+        try {
+          await signInWithCustomToken(auth, __initial_auth_token);
+          console.log("Autenticado com token customizado.");
+        } catch (tokenErr) {
+          console.warn("Falha no token customizado (mismatch), limpando sessão e tentando anônimo...");
           try {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } catch (tokenErr) {
-            // Se o token falhar (como mismatch), tenta anônimo como fallback
-            console.warn("Token mismatch ou erro, tentando login anônimo...");
+            await signOut(auth); // Garante limpeza total antes do fallback
             await signInAnonymously(auth);
+            console.log("Fallback anônimo concluído após erro de token.");
+          } catch (anonErr) {
+            console.error("Erro fatal no fallback anônimo:", anonErr);
           }
-        } else {
-          // Se não houver token, vai direto para anônimo
-          await signInAnonymously(auth);
         }
-      } catch (err) {
-        console.error("Erro crítico na autenticação:", err);
+      } else {
+        // 2. Se não houver token, tenta anônimo diretamente
+        try {
+          await signInAnonymously(auth);
+          console.log("Autenticado anonimamente.");
+        } catch (err) {
+          console.error("Erro no login anônimo direto:", err);
+        }
       }
     };
+
     initAuth();
-    const unsub = onAuthStateChanged(auth, setUser);
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        console.log("Sessão ativa para UID:", currentUser.uid);
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -82,7 +97,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     
-    // Public Data Path: /artifacts/{appId}/public/data/{collection}
+    // Caminho Público de Dados: /artifacts/{appId}/public/data/{collection}
     const qEnsaios = collection(db, 'artifacts', appId, 'public', 'data', 'ensaios');
     const unsubEnsaios = onSnapshot(qEnsaios, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -132,7 +147,7 @@ export default function App() {
     try {
       await setDoc(settingsDoc, { instagramHandle: newHandle }, { merge: true });
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao atualizar Instagram:", err);
     }
   };
 
@@ -438,6 +453,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
