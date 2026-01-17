@@ -49,9 +49,9 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const appId = "site-fotografia-thamiris"; // ID fixo para consistência
+        const appId = "site-fotografia-thamiris";
 
-        // --- 2. COMPONENTE DE ÍCONE (CORREÇÃO DE ERRO) ---
+        // --- 2. COMPONENTE DE ÍCONE ---
         const Icon = ({ name, size = 24, className = "" }) => {
             const iconData = lucide.icons[name];
             if (!iconData) return null;
@@ -62,7 +62,36 @@
             );
         };
 
-        // --- 3. APLICAÇÃO PRINCIPAL ---
+        // --- 3. FUNÇÃO DE COMPRESSÃO DE IMAGEM ---
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // Redimensiona para máximo 1000px de largura para não pesar no banco
+                        const MAX_WIDTH = 1000;
+                        const scaleSize = MAX_WIDTH / img.width;
+                        if (scaleSize < 1) {
+                            canvas.width = MAX_WIDTH;
+                            canvas.height = img.height * scaleSize;
+                        } else {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                        }
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        // Comprime para JPEG 0.7 de qualidade
+                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                    };
+                };
+            });
+        };
+
+        // --- 4. APLICAÇÃO PRINCIPAL ---
         const App = () => {
             const [user, setUser] = useState(null);
             const [portfolio, setPortfolio] = useState([]);
@@ -76,7 +105,6 @@
             const [editingAlbum, setEditingAlbum] = useState(null);
             const [uploading, setUploading] = useState(false);
             
-            // Dados estáticos que não mudam
             const staticImages = {
                 hero: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=3840",
                 trajetoria: "https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg",
@@ -85,7 +113,6 @@
 
             const [formData, setFormData] = useState({ nome: '', email: '', mensagem: '' });
 
-            // Autenticação Silenciosa
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(u => {
                     setUser(u);
@@ -94,12 +121,10 @@
                 return unsubscribe;
             }, []);
 
-            // Carregar Portfólio do Firebase
             useEffect(() => {
                 const unsubscribe = db.collection(`artifacts/${appId}/public/data/portfolio`)
                     .onSnapshot(snapshot => {
                         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        // Se não houver dados no banco, usa dados de exemplo (fallback)
                         if (data.length === 0) {
                             setPortfolio([
                                 { 
@@ -125,7 +150,7 @@
                 return () => window.removeEventListener('scroll', handleScroll);
             }, []);
 
-            // --- FUNÇÕES DE ADMINISTRAÇÃO (FIREBASE) ---
+            // --- AÇÕES ---
             const addAlbum = async () => {
                 if (!isAuthorized) return;
                 const newAlbum = {
@@ -150,27 +175,35 @@
                 await db.doc(`artifacts/${appId}/public/data/portfolio/${id}`).update(data);
             };
 
+            // UPLOAD CORRIGIDO COM COMPRESSÃO
             const handleFileUpload = async (e, albumId) => {
                 const files = Array.from(e.target.files);
                 if (!files.length) return;
                 setUploading(true);
 
-                // Processa cada arquivo
-                for (const file of files) {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onloadend = async () => {
-                        const base64 = reader.result;
+                try {
+                    // Processa ficheiros sequencialmente para não sobrecarregar
+                    for (const file of files) {
+                        const compressedBase64 = await compressImage(file);
+                        
                         await db.doc(`artifacts/${appId}/public/data/portfolio/${albumId}`).update({
-                            images: firebase.firestore.FieldValue.arrayUnion(base64)
+                            images: firebase.firestore.FieldValue.arrayUnion(compressedBase64)
                         });
-                        // Atualiza estado local se estiver editando
+
+                        // Atualiza visualmente de imediato
                         if (editingAlbum && editingAlbum.id === albumId) {
-                            setEditingAlbum(prev => ({ ...prev, images: [...prev.images, base64] }));
+                            setEditingAlbum(prev => {
+                                const currentImages = prev.images || [];
+                                return { ...prev, images: [...currentImages, compressedBase64] };
+                            });
                         }
-                    };
+                    }
+                } catch (error) {
+                    console.error("Erro no upload:", error);
+                    alert("Erro ao enviar imagem. Tente uma foto menor.");
+                } finally {
+                    setUploading(false);
                 }
-                setUploading(false);
             };
 
             const removeImage = async (albumId, imgUrl) => {
@@ -511,5 +544,6 @@
     </script>
 </body>
 </html>
+
 
 
