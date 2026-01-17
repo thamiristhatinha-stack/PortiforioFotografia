@@ -28,7 +28,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'site-fotografia-thamiris';
 
-const App = () => {
+export default function App() {
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -47,41 +47,49 @@ const App = () => {
   const [newEnsaio, setNewEnsaio] = useState({ title: '', url: '', category: 'Casamento' });
   const [formData, setFormData] = useState({ nome: '', email: '', mensagem: '' });
 
+  // Assets fixos
   const fotoTrajetoria = "https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg";
   const fotoCamera = "https://i.postimg.cc/dQdNwwg9/Canon-EOS-R100-by-Henry-Soderlund.jpg";
   const whatsappNumber = "5511993453280";
 
+  // Autenticação Corrigida (Regra 3 e Fix de Token Mismatch)
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Tenta usar o token customizado se ele existir
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           try {
             await signInWithCustomToken(auth, __initial_auth_token);
-          } catch (e) {
+          } catch (tokenErr) {
+            // Se o token falhar (como mismatch), tenta anônimo como fallback
+            console.warn("Token mismatch ou erro, tentando login anônimo...");
             await signInAnonymously(auth);
           }
         } else {
+          // Se não houver token, vai direto para anônimo
           await signInAnonymously(auth);
         }
       } catch (err) {
-        console.error("Erro na autenticação:", err);
+        console.error("Erro crítico na autenticação:", err);
       }
     };
     initAuth();
-    const unsubAuth = onAuthStateChanged(auth, setUser);
-    return () => unsubAuth();
+    const unsub = onAuthStateChanged(auth, setUser);
+    return () => unsub();
   }, []);
 
+  // Busca de Dados (Regra 1 e 2)
   useEffect(() => {
     if (!user) return;
     
+    // Public Data Path: /artifacts/{appId}/public/data/{collection}
     const qEnsaios = collection(db, 'artifacts', appId, 'public', 'data', 'ensaios');
     const unsubEnsaios = onSnapshot(qEnsaios, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEnsaios(data);
       setLoading(false);
     }, (error) => {
-      console.error("Erro no Firestore:", error);
+      console.error("Erro Firestore Ensaios:", error);
       setLoading(false);
     });
 
@@ -90,6 +98,8 @@ const App = () => {
       if (docSnap.exists()) {
         setSiteSettings(docSnap.data());
       }
+    }, (error) => {
+      console.error("Erro Firestore Settings:", error);
     });
 
     return () => {
@@ -117,7 +127,7 @@ const App = () => {
   };
 
   const updateInstagram = async (newHandle) => {
-    if (!user) return;
+    if (!user || !isAuthorized) return;
     const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
     try {
       await setDoc(settingsDoc, { instagramHandle: newHandle }, { merge: true });
@@ -128,7 +138,7 @@ const App = () => {
 
   const addEnsaio = async (e) => {
     e.preventDefault();
-    if (!user || !newEnsaio.url) return;
+    if (!user || !newEnsaio.url || !isAuthorized) return;
     setSaving(true);
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ensaios'), {
@@ -137,20 +147,19 @@ const App = () => {
       });
       setNewEnsaio({ title: '', url: '', category: 'Casamento' });
     } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar trabalho.");
+      console.error("Erro ao adicionar:", err);
     } finally {
       setSaving(false);
     }
   };
 
   const deleteEnsaio = async (id) => {
-    if (!user) return;
+    if (!user || !isAuthorized) return;
     if (window.confirm('Excluir este trabalho?')) {
       try {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ensaios', id));
       } catch (err) {
-        console.error(err);
+        console.error("Erro ao deletar:", err);
       }
     }
   };
@@ -171,10 +180,10 @@ const App = () => {
       {isAuthorized && (
         <div className="fixed top-0 w-full bg-stone-900 text-white h-12 z-[100] flex items-center justify-between px-6 text-[10px] uppercase tracking-[0.2em]">
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-2 text-amber-400 font-bold"><Settings size={14} /> ADMIN</span>
+            <span className="flex items-center gap-2 text-amber-400 font-bold"><Settings size={14} /> MODO EDITOR</span>
             <div className="h-4 w-[1px] bg-white/20"></div>
             <div className="flex items-center gap-2">
-              <span className="text-white/50">INSTAGRAM: @</span>
+              <span className="text-white/50">INSTA: @</span>
               <input 
                 className="bg-white/10 border-b border-white/20 px-1 text-white outline-none focus:border-amber-400"
                 value={siteSettings.instagramHandle}
@@ -195,7 +204,7 @@ const App = () => {
       {/* Navegação */}
       <nav className={`fixed w-full z-50 transition-all duration-700 ${scrolled ? 'bg-white/95 backdrop-blur-md py-4 shadow-sm' : 'bg-transparent py-10'}`}>
         <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
-          <div className={`text-xl md:text-2xl font-light tracking-[0.4em] uppercase transition-all duration-500 ${scrolled ? 'text-stone-800' : 'text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]'}`}>
+          <div className={`text-xl md:text-2xl font-light tracking-[0.4em] uppercase transition-all duration-500 ${scrolled ? 'text-stone-800' : 'text-white drop-shadow-md'}`}>
             Souza <span className={`font-serif italic ${scrolled ? 'text-stone-400' : 'text-white opacity-90'}`}>&</span> Laia
           </div>
           
@@ -204,14 +213,14 @@ const App = () => {
               <a 
                 key={item} 
                 href={`#${item.toLowerCase()}`} 
-                className={`text-[10px] uppercase tracking-[0.2em] transition-all duration-500 font-semibold ${scrolled ? 'text-stone-600 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`}
+                className={`text-[10px] uppercase tracking-[0.2em] transition-all duration-500 font-semibold ${scrolled ? 'text-stone-600 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-md'}`}
               >
                 {item}
               </a>
             ))}
             
             <div className="flex items-center gap-6 ml-4">
-              <a href={instaUrl} target="_blank" rel="noopener noreferrer" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`}>
+              <a href={instaUrl} target="_blank" rel="noopener noreferrer" className={`transition-all duration-500 ${scrolled ? 'text-stone-400 hover:text-stone-900' : 'text-white hover:text-stone-300 drop-shadow-md'}`}>
                 <Instagram size={18} />
               </a>
               {!isAuthorized && (
@@ -222,26 +231,36 @@ const App = () => {
             </div>
           </div>
 
-          <button className={`md:hidden ${scrolled ? 'text-stone-900' : 'text-white drop-shadow-lg'}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button className={`md:hidden ${scrolled ? 'text-stone-900' : 'text-white'}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </nav>
 
+      {/* Mobile Menu Overlay */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 bg-white z-[60] flex flex-col items-center justify-center space-y-8 md:hidden">
+          <button onClick={() => setIsMenuOpen(false)} className="absolute top-8 right-8 text-stone-900"><X size={32}/></button>
+          {['Início', 'Portfolio', 'Trajetória', 'Tecnologia', 'Orçamento'].map((item) => (
+            <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setIsMenuOpen(false)} className="text-2xl font-serif italic text-stone-800">{item}</a>
+          ))}
+        </div>
+      )}
+
       {/* Hero Section */}
-      <section id="início" className="h-screen relative flex items-center justify-center overflow-hidden bg-black">
+      <section id="início" className="h-screen relative flex items-center justify-center overflow-hidden bg-black text-center">
         <div className="absolute inset-0 z-0">
           <img 
             src="https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=3840&auto=format&fit=crop" 
             alt="Fundo Souza e Laia" 
-            className="w-full h-full object-cover opacity-70 scale-100 animate-[subtle-zoom_40s_infinite_alternate]"
+            className="w-full h-full object-cover opacity-70"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/10 to-black/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60"></div>
         </div>
         
-        <div className="relative z-10 text-center px-6 max-w-5xl">
-          <span className="block text-white/90 text-[10px] uppercase tracking-[0.8em] animate-slide-up mb-6 font-medium">Thamiris Souza & Felipe Laia</span>
-          <h1 className="text-5xl md:text-[110px] font-serif text-white leading-none mb-12 tracking-tighter drop-shadow-2xl">
+        <div className="relative z-10 px-6 max-w-5xl">
+          <span className="block text-white/90 text-[10px] uppercase tracking-[0.8em] mb-6 font-medium">Thamiris Souza & Felipe Laia</span>
+          <h1 className="text-5xl md:text-[110px] font-serif text-white leading-none mb-12 tracking-tighter">
             Eternizando <br/> <span className="italic font-light opacity-95">Sentimentos</span>
           </h1>
           <div className="flex flex-col md:flex-row items-center justify-center gap-8">
@@ -252,23 +271,22 @@ const App = () => {
       </section>
 
       {/* Portfólio Section */}
-      <section id="portfolio" className="py-32 px-8 max-w-7xl mx-auto">
+      <section id="portfolio" className="py-32 px-8 max-w-7xl mx-auto text-center">
         <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
-          <div className="max-w-xl">
+          <div className="max-w-xl text-left">
             <span className="text-stone-400 text-xs uppercase tracking-[0.4em]">Curadoria Visual</span>
             <h2 className="text-5xl font-serif mt-4 italic">Nosso Olhar</h2>
           </div>
           {editMode && (
-            <div className="bg-stone-50 p-8 border border-stone-100 w-full md:w-auto shadow-sm">
-              <h4 className="text-[10px] uppercase font-bold mb-6 flex items-center gap-2"><Plus size={14} /> ADICIONAR NOVO TRABALHO</h4>
+            <div className="bg-stone-50 p-8 border border-stone-100 w-full md:w-auto shadow-sm text-left">
+              <h4 className="text-[10px] uppercase font-bold mb-6 flex items-center gap-2"><Plus size={14} /> ADICIONAR POR LINK</h4>
               <form onSubmit={addEnsaio} className="flex flex-col md:flex-row gap-4">
                 <input required placeholder="TÍTULO" className="bg-white border border-stone-200 p-3 text-[10px] outline-none focus:border-stone-900" value={newEnsaio.title} onChange={(e) => setNewEnsaio({...newEnsaio, title: e.target.value})} />
-                <input required placeholder="LINK DA IMAGEM" className="bg-white border border-stone-200 p-3 text-[10px] outline-none focus:border-stone-900" value={newEnsaio.url} onChange={(e) => setNewEnsaio({...newEnsaio, url: e.target.value})} />
+                <input required placeholder="URL DA IMAGEM (.JPG)" className="bg-white border border-stone-200 p-3 text-[10px] outline-none focus:border-stone-900" value={newEnsaio.url} onChange={(e) => setNewEnsaio({...newEnsaio, url: e.target.value})} />
                 <button disabled={saving} className="bg-stone-900 text-white px-6 py-3 text-[10px] uppercase font-bold hover:bg-stone-800 transition-all flex items-center gap-2">
                   {saving ? <Loader2 className="animate-spin" size={14} /> : 'Publicar'}
                 </button>
               </form>
-              <p className="mt-2 text-[9px] text-stone-400">Cole o link direto da imagem (ex: do ImgBB ou PostImg).</p>
             </div>
           )}
         </div>
@@ -284,41 +302,40 @@ const App = () => {
                   {editMode && (
                     <button onClick={() => deleteEnsaio(ensaio.id)} className="absolute top-4 right-4 z-30 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16} /></button>
                   )}
-                  <div className="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8">
+                  <div className="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8 text-left">
                     <span className="text-white/60 text-[10px] uppercase tracking-widest mb-2">{ensaio.category}</span>
                     <h3 className="text-white text-2xl font-serif italic">{ensaio.title}</h3>
                   </div>
                 </div>
               </div>
             ))}
+            {ensaios.length === 0 && !loading && (
+              <div className="col-span-full py-20 text-center border-2 border-dashed border-stone-100 text-stone-300 text-[10px] uppercase tracking-widest">
+                O portfólio está vazio. Use o modo editor para adicionar links de imagens.
+              </div>
+            )}
           </div>
         )}
       </section>
 
       {/* Trajetória Section */}
-      <section id="trajetória" className="py-32 bg-stone-50">
+      <section id="trajetória" className="py-32 bg-stone-50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-8 flex flex-col lg:flex-row gap-24 items-center">
           <div className="w-full lg:w-1/2">
-             <div className="aspect-[3/4] rounded-sm overflow-hidden shadow-2xl ring-[12px] ring-white transform -rotate-2 hover:rotate-0 transition-all duration-700">
+             <div className="aspect-[3/4] rounded-sm overflow-hidden shadow-2xl ring-[12px] ring-white transform -rotate-2">
                 <img src={fotoTrajetoria} className="w-full h-full object-cover" alt="Trajetória Souza & Laia" />
              </div>
           </div>
-          <div className="w-full lg:w-1/2 space-y-10">
+          <div className="w-full lg:w-1/2 space-y-10 text-left">
             <div className="space-y-4">
               <span className="text-stone-400 text-[10px] uppercase tracking-[0.5em] font-semibold">Nossa Essência</span>
               <h2 className="text-6xl font-serif leading-[1.1]">Um amor que se <br/><span className="italic">torna arte.</span></h2>
             </div>
             
             <div className="space-y-6 text-stone-600 leading-relaxed text-lg font-light">
-              <p>
-                O que começou como uma admiração mútua pelo mundo através das lentes, transformou-se em uma missão de vida compartilhada. <strong>Thamiris Souza e Felipe Laia</strong> não são apenas fotógrafos; são parceiros que acreditam que a beleza reside na verdade do momento.
-              </p>
-              <p className="italic border-l-2 border-stone-200 pl-6 text-stone-500 py-2">
-                "Nós não tiramos fotos, nós guardamos sentimentos. Nossa trajetória é marcada pela busca incessante da luz perfeita e da conexão genuína com cada casal que confia em nós."
-              </p>
-              <p>
-                Unimos a sensibilidade feminina ao rigor técnico, criando uma linguagem visual que é, ao mesmo tempo, moderna e atemporal.
-              </p>
+              <p>O que começou como uma admiração mútua pelo mundo através das lentes, transformou-se em uma missão de vida compartilhada.</p>
+              <p className="italic border-l-2 border-stone-200 pl-6 text-stone-500 py-2">"Nós não tiramos fotos, nós guardamos sentimentos."</p>
+              <p>Unimos a sensibilidade feminina ao rigor técnico para criar memórias atemporais.</p>
             </div>
           </div>
         </div>
@@ -328,33 +345,30 @@ const App = () => {
       <section id="tecnologia" className="py-32 bg-stone-900 text-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-8">
            <div className="flex flex-col lg:flex-row items-center gap-20">
-              <div className="w-full lg:w-1/2 relative">
-                <div className="absolute -inset-10 bg-amber-400/5 rounded-full blur-3xl"></div>
-                <img src={fotoCamera} alt="Canon EOS R100" className="w-full h-auto grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl relative z-10" />
+              <div className="w-full lg:w-1/2">
+                <img src={fotoCamera} alt="Canon EOS R100" className="w-full h-auto grayscale opacity-80" />
               </div>
-              <div className="w-full lg:w-1/2 space-y-12">
+              <div className="w-full lg:w-1/2 space-y-12 text-left">
                  <div className="space-y-4">
                     <span className="text-amber-400 text-[10px] uppercase tracking-[0.5em] font-bold">Infraestrutura Premium</span>
                     <h2 className="text-5xl font-serif italic leading-tight">Precisão Técnica <br/>para Memórias Reais</h2>
-                    <p className="text-stone-400 text-lg leading-relaxed font-light">
-                      A tecnologia de ponta é a base para a nossa criatividade. Com a **Canon EOS R100**, cada nuance da luz e cada expressão espontânea são preservadas com a máxima fidelidade.
-                    </p>
+                    <p className="text-stone-400 text-lg leading-relaxed font-light">Equipamento de ponta para garantir que cada expressão espontânea seja preservada com fidelidade.</p>
                  </div>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="space-y-3 p-6 bg-white/5 rounded-sm hover:bg-white/10 transition-all group">
+                    <div className="space-y-3 p-6 bg-white/5 rounded-sm">
                        <div className="flex items-center gap-3 mb-2">
-                          <Maximize size={20} className="text-amber-400 group-hover:scale-110 transition-transform" /> 
-                          <span className="text-[11px] font-bold uppercase tracking-widest">Resolução Impecável</span>
+                          <Maximize size={20} className="text-amber-400" /> 
+                          <span className="text-[11px] font-bold uppercase tracking-widest">Alta Resolução</span>
                        </div>
-                       <p className="text-xs text-stone-500 leading-relaxed">Capturamos cada textura com nitidez absoluta, permitindo ampliações que mantêm a vida e o detalhe de cada cena.</p>
+                       <p className="text-xs text-stone-500 leading-relaxed">Capturamos texturas com nitidez absoluta para ampliações perfeitas.</p>
                     </div>
-                    <div className="space-y-3 p-6 bg-white/5 rounded-sm hover:bg-white/10 transition-all group">
+                    <div className="space-y-3 p-6 bg-white/5 rounded-sm">
                        <div className="flex items-center gap-3 mb-2">
-                          <Zap size={20} className="text-amber-400 group-hover:scale-110 transition-transform" /> 
-                          <span className="text-[11px] font-bold uppercase tracking-widest">Foco de Alta Precisão</span>
+                          <Zap size={20} className="text-amber-400" /> 
+                          <span className="text-[11px] font-bold uppercase tracking-widest">Foco Veloz</span>
                        </div>
-                       <p className="text-xs text-stone-500 leading-relaxed">Tecnologia que rastreia o olhar para garantir que a emoção mais sutil seja o ponto central da imagem.</p>
+                       <p className="text-xs text-stone-500 leading-relaxed">Tecnologia que rastreia o olhar para não perder nenhum segundo.</p>
                     </div>
                  </div>
               </div>
@@ -363,76 +377,36 @@ const App = () => {
       </section>
 
       {/* Orçamento Section */}
-      <section id="orçamento" className="py-32 bg-white relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-stone-50 rounded-full blur-3xl -z-10 opacity-50"></div>
-        
+      <section id="orçamento" className="py-32 bg-white relative">
         <div className="max-w-5xl mx-auto px-8">
           <div className="text-center mb-20 space-y-6">
             <div className="inline-flex items-center gap-3 px-6 py-2 bg-stone-100 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] text-stone-500">
               <Sparkles size={14} className="text-amber-500" /> Consultoria Exclusiva
             </div>
             <h2 className="text-5xl md:text-7xl font-serif leading-tight">Pronta para tornar seu <br/><span className="italic">sonho eterno?</span></h2>
-            <p className="max-w-2xl mx-auto text-stone-500 text-lg font-light leading-relaxed">
-              Cada história é única e merece um olhar exclusivo. Preencha os detalhes abaixo e vamos começar a planejar como guardaremos suas melhores lembranças.
-            </p>
           </div>
 
-          <div className="bg-white border border-stone-100 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] p-8 md:p-16 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-stone-50 -mr-16 -mt-16 rotate-45 group-hover:scale-110 transition-transform duration-700"></div>
-            
-            <form onSubmit={sendWhatsApp} className="space-y-12 relative z-10">
+          <div className="bg-white border border-stone-100 shadow-2xl p-8 md:p-16">
+            <form onSubmit={sendWhatsApp} className="space-y-12 text-left">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Seu Nome</label>
-                  <input 
-                    required 
-                    placeholder="COMO DEVEMOS TE CHAMAR?" 
-                    className="w-full border-b border-stone-100 py-4 outline-none text-xs tracking-widest focus:border-stone-900 transition-colors bg-transparent" 
-                    value={formData.nome} 
-                    onChange={(e) => setFormData({...formData, nome: e.target.value})} 
-                  />
+                  <input required placeholder="NOME COMPLETO" className="w-full border-b border-stone-100 py-4 outline-none text-xs focus:border-stone-900 transition-colors bg-transparent" value={formData.nome} onChange={(e) => setFormData({...formData, nome: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400">E-mail de Contato</label>
-                  <input 
-                    required 
-                    type="email"
-                    placeholder="PARA ENVIARMOS A PROPOSTA" 
-                    className="w-full border-b border-stone-100 py-4 outline-none text-xs tracking-widest focus:border-stone-900 transition-colors bg-transparent" 
-                    value={formData.email} 
-                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                  />
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400">E-mail</label>
+                  <input required type="email" placeholder="EMAIL DE CONTACTO" className="w-full border-b border-stone-100 py-4 outline-none text-xs focus:border-stone-900 transition-colors bg-transparent" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Conte-nos sobre o seu sonho</label>
-                <textarea 
-                  required 
-                  placeholder="DATA, LOCAL E O QUE VOCÊ IMAGINA PARA ESSE DIA..." 
-                  rows="4" 
-                  className="w-full border-b border-stone-100 py-4 outline-none text-xs tracking-widest resize-none focus:border-stone-900 transition-colors bg-transparent" 
-                  value={formData.mensagem} 
-                  onChange={(e) => setFormData({...formData, mensagem: e.target.value})}
-                ></textarea>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Sua Mensagem</label>
+                <textarea required placeholder="DATA E LOCAL DO EVENTO..." rows="4" className="w-full border-b border-stone-100 py-4 outline-none text-xs resize-none focus:border-stone-900 transition-colors bg-transparent" value={formData.mensagem} onChange={(e) => setFormData({...formData, mensagem: e.target.value})}></textarea>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center gap-8 justify-between pt-6">
-                <div className="flex items-center gap-4 text-stone-400">
-                  <div className="flex -space-x-3">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-stone-100 flex items-center justify-center">
-                        <Heart size={12} fill="currentColor" />
-                      </div>
-                    ))}
-                  </div>
-                  <span className="text-[10px] uppercase font-bold tracking-widest">Faça parte da nossa história</span>
-                </div>
-
-                <button className="w-full md:w-auto bg-stone-900 text-white px-16 py-7 text-[10px] uppercase tracking-[0.4em] font-bold flex items-center justify-center gap-4 hover:bg-stone-800 transition-all shadow-2xl hover:-translate-y-1 active:translate-y-0">
-                  <Phone size={14} /> Solicitar Proposta Exclusiva
-                </button>
-              </div>
+              <button className="w-full bg-stone-900 text-white py-6 text-[10px] uppercase tracking-[0.4em] font-bold flex items-center justify-center gap-4 hover:bg-stone-800 transition-all">
+                <Phone size={14} /> Enviar via WhatsApp
+              </button>
             </form>
           </div>
         </div>
@@ -441,38 +415,29 @@ const App = () => {
       {/* Rodapé */}
       <footer className="py-20 bg-stone-50 text-center border-t border-stone-100">
         <div className="text-xl font-light tracking-[0.4em] uppercase mb-10 text-stone-800">Souza <span className="italic text-stone-400">&</span> Laia</div>
-        <div className="flex justify-center gap-8 mb-10">
-          <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-stone-900 transition-all flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold">
-            <Instagram size={20} /> @{siteSettings.instagramHandle}
-          </a>
-        </div>
-        <p className="text-[10px] text-stone-300 tracking-[0.2em]">© 2026 SOUZA & LAIA ART PHOTOGRAPHY • TODOS OS DIREITOS RESERVADOS</p>
+        <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-stone-900 transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold mb-10">
+          <Instagram size={20} /> @{siteSettings.instagramHandle}
+        </a>
+        <p className="text-[10px] text-stone-300 tracking-[0.2em]">© 2026 SOUZA & LAIA ART PHOTOGRAPHY</p>
+        {!isAuthorized && <button onClick={() => setIsAdminOpen(true)} className="mt-8 opacity-10 hover:opacity-100 transition-opacity"><Lock size={12} className="mx-auto" /></button>}
       </footer>
 
       {/* Modal de Login */}
       {isAdminOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-          <div className="bg-white p-12 max-w-sm w-full relative shadow-2xl">
+          <div className="bg-white p-12 max-w-sm w-full relative shadow-2xl text-center">
             <button onClick={() => setIsAdminOpen(false)} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900"><X size={20} /></button>
             <form onSubmit={handleAdminLogin} className="space-y-6">
-              <h3 className="text-center font-serif italic text-xl">Acesso Privado</h3>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="SENHA" className="w-full border p-4 text-center text-xs outline-none focus:border-stone-900 transition-colors" />
-              <button className="w-full bg-stone-900 text-white py-4 text-[10px] uppercase font-bold tracking-widest hover:bg-stone-800 transition-all">Entrar</button>
+              <h3 className="font-serif italic text-xl">Acesso Privado</h3>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="SENHA" className="w-full border p-4 text-center text-xs outline-none focus:border-stone-900" />
+              <button className="w-full bg-stone-900 text-white py-4 text-[10px] uppercase font-bold tracking-widest">Entrar</button>
             </form>
           </div>
         </div>
       )}
-
-      <style htm="true">{`
-        @keyframes subtle-zoom { from { transform: scale(1); } to { transform: scale(1.1); } }
-        @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide-up { animation: slide-up 1.2s ease-out; }
-      `}</style>
     </div>
   );
-};
-
-export default App;
+}
 
 
 
