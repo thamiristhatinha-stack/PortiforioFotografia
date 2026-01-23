@@ -18,7 +18,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDIwpQtKwxy4AWjsPIQ8t0IieWEmyBjtwY",
@@ -34,7 +34,6 @@
         const auth = getAuth(app);
         const appId = "site-fotografia-thamiris";
 
-        // Autenticação Anônima para o Firestore funcionar
         signInAnonymously(auth).catch(err => console.error("Erro Auth:", err));
 
         window.db = db;
@@ -51,9 +50,11 @@
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         .font-serif { font-family: 'Playfair Display', serif; }
         .selection-bg::selection { background-color: #e5e7eb; }
-        .admin-only { display: none; }
-        .is-admin .admin-only { display: block; }
-        .is-admin .admin-inline { display: inline-flex; }
+        
+        /* Controle de visibilidade do Admin */
+        .admin-only { display: none !important; }
+        body.is-admin .admin-only { display: block !important; }
+        body.is-admin .admin-flex { display: flex !important; }
         
         .fade-in { animation: fadeIn 1s ease-out forwards; }
         @keyframes fadeIn {
@@ -65,11 +66,11 @@
 <body class="bg-white text-stone-900 selection-bg">
 
     <!-- Barra Admin Superior (Oculta por padrão) -->
-    <div id="admin-bar" class="admin-only fixed top-0 w-full bg-stone-900 text-white h-12 z-[100] flex items-center justify-between px-6 text-[10px] uppercase tracking-[0.2em]">
+    <div id="admin-bar" class="admin-only fixed top-0 w-full bg-stone-900 text-white h-12 z-[100] items-center justify-between px-6 text-[10px] uppercase tracking-[0.2em] admin-flex">
         <div class="flex items-center gap-4">
             <span class="flex items-center gap-2 text-amber-400 font-bold"><i data-lucide="settings" size="14"></i> MODO EDITOR ATIVO</span>
         </div>
-        <button onclick="logoutAdmin()" class="hover:text-red-400 font-bold">SAIR</button>
+        <button onclick="logoutAdmin()" class="hover:text-red-400 font-bold">DESATIVAR EDIÇÃO</button>
     </div>
 
     <!-- Navegação -->
@@ -112,28 +113,27 @@
         </div>
     </section>
 
-    <!-- Portfolio Section + Gerenciador Admin -->
+    <!-- Portfolio Section -->
     <section id="portfolio" class="py-32 px-8 max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-end mb-24 gap-8 text-left">
             <div class="max-w-xl">
                 <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Curadoria Visual</span>
                 <h2 class="text-5xl font-serif mt-4 italic">Nosso Olhar</h2>
-                <p class="mt-6 text-stone-500 font-light leading-relaxed tracking-wide">Capturamos a essência de cada momento, transformando efemeridade em legado visual.</p>
+                <p class="mt-6 text-stone-500 font-light leading-relaxed tracking-wide">Capturamos a essência de cada momento, transformando efemeridade em legado visual através de técnicas exclusivas de luz e composição.</p>
             </div>
             
             <!-- Painel de Adição (Admin Only) -->
             <div class="admin-only bg-stone-50 p-8 border border-stone-100 w-full md:w-auto shadow-sm">
-                <h4 class="text-[10px] uppercase font-bold mb-6 flex items-center gap-2"><i data-lucide="plus" size="14"></i> Adicionar ao Portfólio</h4>
+                <h4 class="text-[10px] uppercase font-bold mb-6 flex items-center gap-2 text-stone-900"><i data-lucide="plus" size="14"></i> Adicionar ao Portfólio</h4>
                 <form id="addEnsaioForm" class="flex flex-col md:flex-row gap-4">
-                    <input id="newTitle" required placeholder="TÍTULO" class="bg-white border border-stone-200 p-3 text-[10px] outline-none w-full md:w-48">
-                    <input id="newUrl" required placeholder="URL DA IMAGEM" class="bg-white border border-stone-200 p-3 text-[10px] outline-none w-full md:w-64">
+                    <input id="newTitle" required placeholder="TÍTULO DO ÁLBUM" class="bg-white border border-stone-200 p-3 text-[10px] outline-none w-full md:w-48 text-stone-800">
+                    <input id="newUrl" required placeholder="URL DA IMAGEM" class="bg-white border border-stone-200 p-3 text-[10px] outline-none w-full md:w-64 text-stone-800">
                     <button type="submit" class="bg-stone-900 text-white px-8 py-3 text-[10px] uppercase font-bold hover:bg-stone-800 transition-all">Publicar</button>
                 </form>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12" id="portfolio-grid">
-            <!-- Os itens serão injetados aqui pelo Firebase -->
             <div class="text-stone-300 py-20 col-span-full text-center uppercase tracking-widest text-xs">Carregando memórias...</div>
         </div>
     </section>
@@ -156,7 +156,7 @@
                     <h2 class="text-5xl md:text-7xl font-serif italic leading-tight">Nossa Jornada de <br> <span class="text-stone-300 not-italic">Arte & Entrega</span></h2>
                     <div class="space-y-8 text-stone-600 font-light leading-loose text-lg">
                         <p>Nascemos da paixão de unir técnica apurada e sensibilidade artística. Thamiris Souza, com seu olhar detalhista, e Felipe Laia, mestre na composição, criaram um estilo que foge do óbvio.</p>
-                        <p>Buscamos a singularidade em cada registro, transformando a fotografia em uma forma de preservação da alma.</p>
+                        <p>Buscamos a singularidade em cada registro, transformando a fotografia em uma forma de preservação da alma e da história de quem passa por nossas lentes.</p>
                         <p>Cada projeto é uma nova oportunidade de documentar o amor em sua forma mais pura.</p>
                     </div>
                 </div>
@@ -164,7 +164,7 @@
         </div>
     </section>
 
-    <!-- Tecnologia Section (RESTAURADA) -->
+    <!-- Tecnologia Section -->
     <section id="tecnologia" class="py-32 bg-white text-center">
         <div class="max-w-7xl mx-auto px-8">
             <div class="mb-24">
@@ -240,14 +240,16 @@
     </footer>
 
     <script>
-        // -- LÓGICA DO SITE E FIREBASE --
-
+        // Inicialização
         function initApp() {
             lucide.createIcons();
             loadPortfolio();
+            // Resetar o modo admin ao carregar para garantir que comece fechado
+            localStorage.removeItem('isAdmin');
+            document.body.classList.remove('is-admin');
         }
 
-        // Carregar fotos do Portfólio em tempo real
+        // Carregar fotos
         function loadPortfolio() {
             const grid = document.getElementById('portfolio-grid');
             const appId = "site-fotografia-thamiris";
@@ -278,7 +280,7 @@
             });
         }
 
-        // Adicionar novo ensaio (Admin)
+        // Adicionar novo
         document.getElementById('addEnsaioForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = document.getElementById('newTitle').value;
@@ -293,42 +295,38 @@
                 });
                 e.target.reset();
             } catch (err) {
-                alert("Erro ao salvar. Verifique se você está autenticado.");
+                alert("Erro ao salvar. Verifique a conexão.");
             }
         });
 
-        // Deletar ensaio (Admin)
+        // Deletar
         window.deleteEnsaio = async (id) => {
-            if (!confirm("Deseja realmente remover esta foto?")) return;
+            if (!confirm("Remover esta foto?")) return;
             const appId = "site-fotografia-thamiris";
             try {
                 await window.deleteDoc(window.doc(window.db, 'artifacts', appId, 'public', 'data', 'ensaios', id));
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         };
 
-        // Lógica de Login Admin
-        function promptAdmin() {
-            const pass = prompt("Digite a senha administrativa:");
+        // Login Admin
+        window.promptAdmin = function() {
+            const pass = prompt("Senha Administrativa:");
             if (pass === "thamiris123") {
                 document.body.classList.add('is-admin');
                 localStorage.setItem('isAdmin', 'true');
                 lucide.createIcons();
+                window.scrollTo(0, 0); // Sobe para ver a barra admin
+            } else if (pass !== null) {
+                alert("Senha incorreta.");
             }
         }
 
-        function logoutAdmin() {
+        window.logoutAdmin = function() {
             document.body.classList.remove('is-admin');
             localStorage.removeItem('isAdmin');
         }
 
-        // Verificar se já estava logado
-        if (localStorage.getItem('isAdmin') === 'true') {
-            document.body.classList.add('is-admin');
-        }
-
-        // Efeito Scroll Navbar
+        // Scroll Navbar
         window.addEventListener('scroll', () => {
             const navbar = document.getElementById('navbar');
             const logo = document.getElementById('logo');
@@ -346,7 +344,7 @@
             }
         });
 
-        // WhatsApp Form
+        // WhatsApp
         document.getElementById('contactForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const nome = document.getElementById('nome').value;
@@ -354,7 +352,7 @@
             window.open(`https://wa.me/5511993453280?text=Olá, sou ${nome}. ${msg}`, '_blank');
         });
 
-        setTimeout(initApp, 1000); // Aguarda carregamento do Firebase
+        setTimeout(initApp, 1000);
     </script>
 </body>
 </html>
