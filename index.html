@@ -14,44 +14,12 @@
     <!-- Ícones -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Firebase SDK (Modular) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDIwpQtKwxy4AWjsPIQ8t0IieWEmyBjtwY",
-            authDomain: "sitefotografia-cfa61.firebaseapp.com",
-            projectId: "sitefotografia-cfa61",
-            storageBucket: "sitefotografia-cfa61.firebasestorage.app",
-            messagingSenderId: "849725176102",
-            appId: "1:849725176102:web:0b5e6106fe69ce4c6429e7",
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const appId = "site-fotografia-thamiris";
-
-        signInAnonymously(auth).catch(err => console.error("Erro Auth:", err));
-
-        window.db = db;
-        window.collection = collection;
-        window.addDoc = addDoc;
-        window.onSnapshot = onSnapshot;
-        window.deleteDoc = deleteDoc;
-        window.doc = doc;
-        window.query = query;
-        window.orderBy = orderBy;
-    </script>
-
     <style>
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         .font-serif { font-family: 'Playfair Display', serif; }
         .selection-bg::selection { background-color: #e5e7eb; }
         
-        /* Controle de visibilidade do Admin */
+        /* Admin Hidden by Default */
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: block !important; }
         body.is-admin .admin-flex { display: flex !important; }
@@ -61,22 +29,37 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        #album-modal { display: none; }
+        #album-modal.active { display: flex; }
+
+        input, select {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tech-card:hover i { color: #1c1917; transform: scale(1.1); transition: all 0.3s; }
     </style>
 </head>
 <body class="bg-white text-stone-900 selection-bg">
 
-    <!-- Barra Admin Superior (Oculta por padrão) -->
-    <div id="admin-bar" class="admin-only fixed top-0 w-full bg-stone-900 text-white h-12 z-[100] items-center justify-between px-6 text-[10px] uppercase tracking-[0.2em] admin-flex">
-        <div class="flex items-center gap-4">
-            <span class="flex items-center gap-2 text-amber-400 font-bold"><i data-lucide="settings" size="14"></i> MODO EDITOR ATIVO</span>
+    <!-- Barra Admin -->
+    <div id="admin-bar" class="admin-only fixed top-0 w-full bg-stone-900 text-white h-16 z-[100] items-center justify-between px-6 text-[10px] uppercase tracking-[0.2em] admin-flex">
+        <div class="flex items-center gap-6">
+            <span class="flex items-center gap-2 text-amber-400 font-bold"><i data-lucide="settings" size="14"></i> MODO EDITOR</span>
+            <div class="flex items-center gap-2 bg-stone-800 px-3 py-2 rounded">
+                <span>URL INSTAGRAM:</span>
+                <input type="text" id="admin-insta-url" class="bg-transparent border-none text-white text-[10px] lowercase w-48 focus:ring-0" placeholder="https://instagram.com/seuusuario">
+                <button onclick="saveInstaUrl()" class="bg-amber-400 text-stone-900 px-2 py-1 font-bold rounded">SALVAR</button>
+            </div>
         </div>
-        <button onclick="logoutAdmin()" class="hover:text-red-400 font-bold">DESATIVAR EDIÇÃO</button>
+        <button onclick="logoutAdmin()" class="hover:text-red-400 font-bold">FECHAR EDITOR</button>
     </div>
 
     <!-- Navegação -->
     <nav id="navbar" class="fixed w-full z-50 transition-all duration-700 py-10">
         <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
-            <div id="logo" class="text-xl md:text-2xl font-light tracking-[0.4em] uppercase text-white drop-shadow-md">
+            <div id="logo" class="text-xl md:text-2xl font-light tracking-[0.4em] uppercase text-white drop-shadow-md transition-colors duration-300">
                 Souza <span class="font-serif italic">&</span> Laia
             </div>
             
@@ -86,12 +69,12 @@
                 <a href="#trajetoria" class="nav-link text-[10px] uppercase tracking-[0.2em] font-semibold text-white hover:text-stone-300 drop-shadow-md">Trajetória</a>
                 <a href="#tecnologia" class="nav-link text-[10px] uppercase tracking-[0.2em] font-semibold text-white hover:text-stone-300 drop-shadow-md">Tecnologia</a>
                 <a href="#orcamento" class="nav-link text-[10px] uppercase tracking-[0.2em] font-semibold text-white hover:text-stone-300 drop-shadow-md">Orçamento</a>
-                <a href="https://www.instagram.com/souzaelaia.artphotography/" target="_blank" class="text-white drop-shadow-md">
+                <a id="insta-link-main" href="https://www.instagram.com/souzaelaia.artphotography/" target="_blank" class="text-white drop-shadow-md transition-colors duration-300">
                     <i data-lucide="instagram" size="18"></i>
                 </a>
             </div>
 
-            <button class="md:hidden text-white" id="menu-btn" onclick="toggleMobileMenu()">
+            <button class="md:hidden text-white" id="mobile-menu-toggle">
                 <i data-lucide="menu" size="24"></i>
             </button>
         </div>
@@ -101,7 +84,7 @@
     <section id="inicio" class="h-screen relative flex items-center justify-center overflow-hidden bg-black text-center">
         <div class="absolute inset-0 z-0">
             <img src="https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=3840&auto=format&fit=crop" alt="Hero" class="w-full h-full object-cover opacity-70">
-            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80"></div>
         </div>
         <div class="relative z-10 px-6 max-w-5xl fade-in">
             <span class="block text-white/90 text-[10px] uppercase tracking-[0.8em] mb-6 font-medium">Thamiris Souza & Felipe Laia</span>
@@ -118,115 +101,186 @@
         <div class="flex flex-col md:flex-row justify-between items-end mb-24 gap-8 text-left">
             <div class="max-w-xl">
                 <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Curadoria Visual</span>
-                <h2 class="text-5xl font-serif mt-4 italic">Nosso Olhar</h2>
-                <p class="mt-6 text-stone-500 font-light leading-relaxed tracking-wide">Capturamos a essência de cada momento, transformando efemeridade em legado visual através de técnicas exclusivas de luz e composição.</p>
-            </div>
-            
-            <!-- Painel de Adição (Admin Only) -->
-            <div class="admin-only bg-stone-50 p-8 border border-stone-100 w-full md:w-auto shadow-sm">
-                <h4 class="text-[10px] uppercase font-bold mb-6 flex items-center gap-2 text-stone-900"><i data-lucide="plus" size="14"></i> Adicionar ao Portfólio</h4>
-                <form id="addEnsaioForm" class="flex flex-col md:flex-row gap-4">
-                    <input id="newTitle" required placeholder="TÍTULO DO ÁLBUM" class="bg-white border border-stone-200 p-3 text-[10px] outline-none w-full md:w-48 text-stone-800">
-                    <input id="newUrl" required placeholder="URL DA IMAGEM" class="bg-white border border-stone-200 p-3 text-[10px] outline-none w-full md:w-64 text-stone-800">
-                    <button type="submit" class="bg-stone-900 text-white px-8 py-3 text-[10px] uppercase font-bold hover:bg-stone-800 transition-all">Publicar</button>
-                </form>
+                <h2 class="text-5xl font-serif mt-4 italic">Álbuns em Destaque</h2>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12" id="portfolio-grid">
-            <div class="text-stone-300 py-20 col-span-full text-center uppercase tracking-widest text-xs">Carregando memórias...</div>
+            
+            <!-- 1. Dois Corações, Uma História -->
+            <div onclick="openAlbum('casal')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100 shadow-sm fade-in">
+                <img src="https://i.postimg.cc/5NVsZTfV/Whats-App-Image-2026-01-17-at-11-(10).jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
+                <div class="absolute inset-0 bg-stone-900/70 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-center items-center p-8 text-center text-white">
+                    <h3 class="text-2xl font-serif italic mb-2 text-white">Dois Corações, Uma História</h3>
+                    <p class="text-[9px] uppercase tracking-widest opacity-70">Ver Álbum</p>
+                </div>
+            </div>
+
+            <!-- 2. Colecionando Histórias -->
+            <div onclick="openAlbum('historias')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100 shadow-sm fade-in">
+                <img src="https://i.postimg.cc/Kvc0GWsq/Whats-App-Image-2026-01-23-at-21-09-59.jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
+                <div class="absolute inset-0 bg-stone-900/70 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-center items-center p-8 text-center text-white">
+                    <h3 class="text-2xl font-serif italic mb-2 text-white">Colecionando Histórias</h3>
+                    <p class="text-[9px] uppercase tracking-widest opacity-70">Ver Álbum</p>
+                </div>
+            </div>
+
+            <!-- 3. O Doce Mundo da Isa -->
+            <div onclick="openAlbum('isa')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100 shadow-sm fade-in">
+                <img src="https://i.postimg.cc/VLtF4cpC/Whats-App-Image-2026-01-23-at-20-17-26.jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
+                <div class="absolute inset-0 bg-stone-900/70 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-center items-center p-8 text-center text-white">
+                    <h3 class="text-2xl font-serif italic mb-2 text-white">O Doce Mundo da Isa</h3>
+                    <p class="text-[9px] uppercase tracking-widest opacity-70">Ver Álbum</p>
+                </div>
+            </div>
+
+            <!-- 4. Jantar de Aniversário -->
+            <div onclick="openAlbum('jantar')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100 shadow-sm fade-in">
+                <img src="https://i.postimg.cc/FKVWpQf4/Whats-App-Image-2026-01-23-at-20-32-56.jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
+                <div class="absolute inset-0 bg-stone-900/70 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-center items-center p-8 text-center text-white">
+                    <h3 class="text-2xl font-serif italic mb-2 text-white">Jantar de Aniversário</h3>
+                    <p class="text-[9px] uppercase tracking-widest opacity-70">Ver Álbum</p>
+                </div>
+            </div>
+
+            <!-- 5. Retratos ao Ar Livre -->
+            <div onclick="openAlbum('retratos')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100 shadow-sm fade-in">
+                <img src="https://i.postimg.cc/Qd4VTFmW/Whats-App-Image-2026-01-23-at-20-26-02.jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
+                <div class="absolute inset-0 bg-stone-900/70 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-center items-center p-8 text-center text-white">
+                    <h3 class="text-2xl font-serif italic mb-2 text-white">Retratos ao Ar Livre</h3>
+                    <p class="text-[9px] uppercase tracking-widest opacity-70">Ver Álbum</p>
+                </div>
+            </div>
+
+            <!-- 6. Onde o Sabor Encontra a Lente -->
+            <div onclick="openAlbum('sabor')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100 shadow-sm fade-in">
+                <img src="https://i.postimg.cc/6649HH07/Whats-App-Image-2026-01-23-at-21-03-32.jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
+                <div class="absolute inset-0 bg-stone-900/70 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-center items-center p-8 text-center text-white">
+                    <h3 class="text-2xl font-serif italic mb-2 text-white">Onde o Sabor Encontra a Lente</h3>
+                    <p class="text-[9px] uppercase tracking-widest opacity-70">Ver Álbum</p>
+                </div>
+            </div>
+
         </div>
     </section>
 
-    <!-- Trajetória Section -->
+    <!-- Modal do Álbum -->
+    <div id="album-modal" class="fixed inset-0 z-[200] bg-black/95 items-center justify-center p-4 md:p-12 backdrop-blur-lg">
+        <button onclick="closeAlbum()" class="absolute top-8 right-8 text-white/50 hover:text-white z-[210] transition-colors">
+            <i data-lucide="x" size="32"></i>
+        </button>
+        <button onclick="prevSlide()" class="absolute left-4 md:left-8 text-white/50 hover:text-white z-[210] transition-colors">
+            <i data-lucide="chevron-left" size="48"></i>
+        </button>
+        <div class="relative w-full h-full flex items-center justify-center pointer-events-none">
+            <img id="modal-img" src="" class="max-w-full max-h-full object-contain fade-in shadow-2xl pointer-events-auto">
+        </div>
+        <button onclick="nextSlide()" class="absolute right-4 md:right-8 text-white/50 hover:text-white z-[210] transition-colors">
+            <i data-lucide="chevron-right" size="48"></i>
+        </button>
+        <div class="absolute bottom-8 text-white/50 text-[10px] tracking-[0.4em] uppercase" id="slide-counter">1 / 10</div>
+    </div>
+
+    <!-- Trajetória -->
     <section id="trajetoria" class="py-32 bg-stone-50 overflow-hidden">
         <div class="max-w-7xl mx-auto px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
                 <div class="relative">
                     <div class="aspect-[3/4] overflow-hidden shadow-2xl">
-                        <img src="https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg" alt="Trajetória" class="w-full h-full object-cover">
-                    </div>
-                    <div class="absolute -bottom-12 -right-12 bg-white p-12 shadow-xl hidden md:block max-w-xs border border-stone-100">
-                        <i data-lucide="sparkles" class="text-amber-400 mb-4" size="24"></i>
-                        <p class="text-[10px] uppercase tracking-[0.2em] leading-relaxed text-stone-400">"A fotografia não é sobre o que se vê, mas sobre como se sente."</p>
+                        <img src="https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg" alt="Thamiris e Felipe" class="w-full h-full object-cover">
                     </div>
                 </div>
-                <div class="space-y-12 text-left">
-                    <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Desde 2018</span>
-                    <h2 class="text-5xl md:text-7xl font-serif italic leading-tight">Nossa Jornada de <br> <span class="text-stone-300 not-italic">Arte & Entrega</span></h2>
-                    <div class="space-y-8 text-stone-600 font-light leading-loose text-lg">
-                        <p>Nascemos da paixão de unir técnica apurada e sensibilidade artística. Thamiris Souza, com seu olhar detalhista, e Felipe Laia, mestre na composição, criaram um estilo que foge do óbvio.</p>
-                        <p>Buscamos a singularidade em cada registro, transformando a fotografia em uma forma de preservação da alma e da história de quem passa por nossas lentes.</p>
-                        <p>Cada projeto é uma nova oportunidade de documentar o amor em sua forma mais pura.</p>
+                <div class="space-y-10 text-left">
+                    <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">A Arte por Trás da Lente</span>
+                    <h2 class="text-5xl md:text-7xl font-serif italic leading-tight">Nossa Jornada</h2>
+                    <div class="space-y-6 text-stone-600 font-light leading-relaxed text-lg text-justify">
+                        <p>A fotografia de Souza & Laia não é apenas sobre o registro de um evento, mas sobre a decodificação da alma humana através da luz. Thamiris traz a sensibilidade do detalhe, enquanto Felipe complementa com o domínio técnico.</p>
+                        <p>Nascemos da paixão de unir técnica apurada e sensibilidade artística, transformando a fotografia numa forma de preservação da alma e da história de quem passa por nossas lentes.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Tecnologia Section -->
-    <section id="tecnologia" class="py-32 bg-white text-center">
+    <!-- Tecnologia Section (RESTAURADA) -->
+    <section id="tecnologia" class="py-32 bg-white">
         <div class="max-w-7xl mx-auto px-8">
-            <div class="mb-24">
+            <div class="text-center mb-24">
                 <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Equipamento de Elite</span>
                 <h2 class="text-5xl font-serif mt-4 italic">Precisão Técnica</h2>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-16 items-center">
+                <!-- Coluna Esquerda -->
                 <div class="space-y-16 text-right order-2 md:order-1">
-                    <div class="space-y-4">
-                        <i data-lucide="camera" class="ml-auto text-stone-300" size="32"></i>
+                    <div class="space-y-4 tech-card">
+                        <i data-lucide="camera" class="ml-auto text-stone-300 transition-colors" size="32"></i>
                         <h4 class="text-[10px] uppercase font-bold tracking-widest">Sensores Full Frame</h4>
-                        <p class="text-stone-400 text-xs font-light">Máxima resolução em qualquer condição de luz.</p>
+                        <p class="text-stone-400 text-xs font-light leading-relaxed">Máxima resolução e performance impecável em qualquer condição de luz, garantindo fidelidade de cor.</p>
                     </div>
-                    <div class="space-y-4">
-                        <i data-lucide="zap" class="ml-auto text-stone-300" size="32"></i>
+                    <div class="space-y-4 tech-card">
+                        <i data-lucide="zap" class="ml-auto text-stone-300 transition-colors" size="32"></i>
                         <h4 class="text-[10px] uppercase font-bold tracking-widest">Foco Ultra Rápido</h4>
-                        <p class="text-stone-400 text-xs font-light">Garantia de que cada expressão seja nítida.</p>
+                        <p class="text-stone-400 text-xs font-light leading-relaxed">Tecnologia de rastreio ocular para garantir que cada expressão e sorriso sejam capturados com nitidez.</p>
                     </div>
                 </div>
-                <div class="order-1 md:order-2 flex justify-center">
-                    <img src="https://i.postimg.cc/dQdNwwg9/Canon-EOS-R100-by-Henry-Soderlund.jpg" class="w-64 drop-shadow-2xl">
+                
+                <!-- Centro (Imagem da Camera) -->
+                <div class="relative order-1 md:order-2">
+                    <div class="aspect-square rounded-full border border-stone-100 flex items-center justify-center p-8">
+                        <div class="aspect-square rounded-full border border-stone-200 flex items-center justify-center p-12">
+                           <img src="https://i.postimg.cc/dQdNwwg9/Canon-EOS-R100-by-Henry-Soderlund.jpg" alt="Equipamento" class="w-full h-full object-contain drop-shadow-2xl">
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Coluna Direita -->
                 <div class="space-y-16 text-left order-3">
-                    <div class="space-y-4">
-                        <i data-lucide="maximize" class="text-stone-300" size="32"></i>
+                    <div class="space-y-4 tech-card">
+                        <i data-lucide="maximize" class="text-stone-300 transition-colors" size="32"></i>
                         <h4 class="text-[10px] uppercase font-bold tracking-widest">Lentes Prime</h4>
-                        <p class="text-stone-400 text-xs font-light">Bokeh suave para retratos que parecem pinturas.</p>
+                        <p class="text-stone-400 text-xs font-light leading-relaxed">Bokeh suave e nitidez cristalina para retratos que parecem pinturas, isolando o que realmente importa.</p>
                     </div>
-                    <div class="space-y-4">
-                        <i data-lucide="award" class="text-stone-300" size="32"></i>
+                    <div class="space-y-4 tech-card">
+                        <i data-lucide="award" class="text-stone-300 transition-colors" size="32"></i>
                         <h4 class="text-[10px] uppercase font-bold tracking-widest">Backup em Tempo Real</h4>
-                        <p class="text-stone-400 text-xs font-light">Segurança absoluta com gravação dupla.</p>
+                        <p class="text-stone-400 text-xs font-light leading-relaxed">Segurança absoluta com gravação dupla simultânea. Seus momentos estão protegidos desde o primeiro clique.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Orçamento Section -->
+    <!-- Orçamento -->
     <section id="orcamento" class="py-32 bg-stone-900 text-white relative overflow-hidden">
         <div class="max-w-5xl mx-auto px-8 relative z-10">
-            <div class="text-center mb-24">
-                <h2 class="text-5xl md:text-7xl font-serif leading-tight italic text-white/90">Pronta para o seu sonho?</h2>
+            <div class="text-center mb-20">
+                <h2 class="text-5xl md:text-7xl font-serif leading-tight italic text-white/90">Solicite seu Orçamento</h2>
             </div>
-            <div class="bg-white text-stone-900 p-8 md:p-20 shadow-2xl">
-                <form id="contactForm" class="space-y-12 text-left">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+            
+            <div class="bg-white text-stone-900 p-8 md:p-20 shadow-2xl rounded-sm">
+                <form id="contactForm" class="space-y-10 text-left">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div class="space-y-2">
                             <label class="text-[9px] uppercase font-bold tracking-widest text-stone-400">Nome Completo</label>
-                            <input required id="nome" class="w-full border-b border-stone-100 py-3 outline-none text-sm focus:border-stone-900 transition-colors">
+                            <input required id="nome" placeholder="Seu nome" class="w-full border-stone-100 py-3 outline-none text-sm focus:border-stone-900 transition-colors">
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[9px] uppercase font-bold tracking-widest text-stone-400">E-mail</label>
-                            <input required type="email" id="email" class="w-full border-b border-stone-100 py-3 outline-none text-sm focus:border-stone-900 transition-colors">
+                            <label class="text-[9px] uppercase font-bold tracking-widest text-stone-400">WhatsApp</label>
+                            <input required id="whatsapp" placeholder="(00) 00000-0000" class="w-full border-stone-100 py-3 outline-none text-sm focus:border-stone-900 transition-colors">
+                        </div>
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="text-[9px] uppercase font-bold tracking-widest text-stone-400">Tipo de Evento / Ensaio</label>
+                            <select id="tipo-evento" class="w-full border-stone-100 py-3 outline-none text-sm focus:border-stone-900 transition-colors cursor-pointer appearance-none bg-white">
+                                <option value="Casal">Ensaio de Casal</option>
+                                <option value="Aniversário">Aniversário / Evento Social</option>
+                                <option value="Retrato">Retrato Individual</option>
+                                <option value="Gastronomia">Gastronomia / Comercial</option>
+                                <option value="Outro">Outro (Especificar na mensagem)</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <label class="text-[9px] uppercase font-bold tracking-widest text-stone-400">Sobre o evento</label>
-                        <textarea required id="mensagem" rows="4" class="w-full border-b border-stone-100 py-3 outline-none text-sm resize-none focus:border-stone-900 transition-colors"></textarea>
-                    </div>
-                    <button type="submit" class="w-full bg-stone-900 text-white py-8 text-[10px] uppercase tracking-[0.4em] font-bold flex items-center justify-center gap-4 hover:bg-stone-800">
-                        <i data-lucide="phone" size="14"></i> WhatsApp
+                    <button type="submit" class="w-full bg-stone-900 text-white py-8 text-[10px] uppercase tracking-[0.4em] font-bold flex items-center justify-center gap-4 hover:bg-black transition-all">
+                        <i data-lucide="send" size="14"></i> Enviar Mensagem via WhatsApp
                     </button>
                 </form>
             </div>
@@ -235,124 +289,136 @@
 
     <footer class="py-24 bg-white text-center border-t border-stone-50">
         <div class="text-2xl font-light tracking-[0.5em] uppercase mb-12 text-stone-800">Souza & Laia</div>
+        <div class="flex justify-center gap-6 mb-8">
+             <a id="insta-link-footer" href="https://www.instagram.com/souzaelaia.artphotography/" target="_blank" class="text-stone-400 hover:text-stone-900 transition-colors">
+                <i data-lucide="instagram" size="20"></i>
+            </a>
+        </div>
         <p class="text-[9px] text-stone-300 tracking-[0.3em] font-medium uppercase mb-8">© 2026 SOUZA & LAIA ART PHOTOGRAPHY</p>
         <button onclick="promptAdmin()" class="opacity-10 hover:opacity-100 transition-opacity"><i data-lucide="lock" size="12"></i></button>
     </footer>
 
     <script>
-        // Inicialização
-        function initApp() {
-            lucide.createIcons();
-            loadPortfolio();
-            // Resetar o modo admin ao carregar para garantir que comece fechado
-            localStorage.removeItem('isAdmin');
-            document.body.classList.remove('is-admin');
+        const albums = {
+            casal: [
+                "https://i.postimg.cc/5NVsZTfV/Whats-App-Image-2026-01-17-at-11-(10).jpg", 
+                "https://i.postimg.cc/9XTxgC5g/Whats-App-Image-2026-01-17-at-11-(2).jpg",
+                "https://i.postimg.cc/Qx3fRwjj/Whats-App-Image-2026-01-17-at-11-(11).jpg"
+            ],
+            isa: [
+                "https://i.postimg.cc/VLtF4cpC/Whats-App-Image-2026-01-23-at-20-17-26.jpg",
+                "https://i.postimg.cc/qMKGQdSC/Whats-App-Image-2026-01-23-at-20-17-26-(1).jpg"
+            ],
+            retratos: [
+                "https://i.postimg.cc/Qd4VTFmW/Whats-App-Image-2026-01-23-at-20-26-02.jpg",
+                "https://i.postimg.cc/sg61hMmh/Whats-App-Image-2026-01-23-at-20-26-02-(1).jpg"
+            ],
+            jantar: [
+                "https://i.postimg.cc/FKVWpQf4/Whats-App-Image-2026-01-23-at-20-32-56.jpg",
+                "https://i.postimg.cc/50kmK9fc/Whats-App-Image-2026-01-23-at-20-32-56-(1).jpg"
+            ],
+            sabor: [
+                "https://i.postimg.cc/6649HH07/Whats-App-Image-2026-01-23-at-21-03-32.jpg",
+                "https://i.postimg.cc/9XwWxxpC/Whats-App-Image-2026-01-23-at-21-03-32-(1).jpg"
+            ],
+            historias: [
+                "https://i.postimg.cc/Kvc0GWsq/Whats-App-Image-2026-01-23-at-21-09-59.jpg",
+                "https://i.postimg.cc/pVJ0tvk7/Whats-App-Image-2026-01-23-at-21-09-59-(1).jpg"
+            ]
+        };
+        
+        let currentAlbumKey = 'casal';
+        let currentSlide = 0;
+
+        // Carregar Instagram salvo
+        const savedInsta = localStorage.getItem('insta_url') || "https://www.instagram.com/souzaelaia.artphotography/";
+        document.getElementById('insta-link-main').href = savedInsta;
+        document.getElementById('insta-link-footer').href = savedInsta;
+        document.getElementById('admin-insta-url').value = savedInsta;
+
+        function saveInstaUrl() {
+            const url = document.getElementById('admin-insta-url').value;
+            localStorage.setItem('insta_url', url);
+            document.getElementById('insta-link-main').href = url;
+            document.getElementById('insta-link-footer').href = url;
+            alert("Instagram atualizado!");
         }
 
-        // Carregar fotos
-        function loadPortfolio() {
-            const grid = document.getElementById('portfolio-grid');
-            const appId = "site-fotografia-thamiris";
-            const q = window.query(
-                window.collection(window.db, 'artifacts', appId, 'public', 'data', 'ensaios'),
-                window.orderBy('createdAt', 'desc')
-            );
-
-            window.onSnapshot(q, (snap) => {
-                grid.innerHTML = '';
-                snap.forEach((doc) => {
-                    const data = doc.data();
-                    const id = doc.id;
-                    const card = `
-                        <div class="group relative aspect-[4/5] overflow-hidden bg-stone-100">
-                            <img src="${data.url}" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
-                            <div class="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8 text-left">
-                                <h3 class="text-white text-2xl font-serif italic">${data.title}</h3>
-                                <button onclick="deleteEnsaio('${id}')" class="admin-only mt-4 bg-red-500 text-white p-2 rounded-full w-fit hover:bg-red-600 transition-colors">
-                                    <i data-lucide="trash-2" size="14"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    grid.innerHTML += card;
-                });
-                lucide.createIcons();
-            });
+        function openAlbum(albumKey) {
+            currentAlbumKey = albumKey;
+            currentSlide = 0;
+            updateSlide();
+            document.getElementById('album-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
 
-        // Adicionar novo
-        document.getElementById('addEnsaioForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const title = document.getElementById('newTitle').value;
-            const url = document.getElementById('newUrl').value;
-            const appId = "site-fotografia-thamiris";
+        function closeAlbum() {
+            document.getElementById('album-modal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
 
-            try {
-                await window.addDoc(window.collection(window.db, 'artifacts', appId, 'public', 'data', 'ensaios'), {
-                    title,
-                    url,
-                    createdAt: new Date().toISOString()
-                });
-                e.target.reset();
-            } catch (err) {
-                alert("Erro ao salvar. Verifique a conexão.");
+        function nextSlide() {
+            const imgs = albums[currentAlbumKey];
+            currentSlide = (currentSlide + 1) % imgs.length;
+            updateSlide();
+        }
+
+        function prevSlide() {
+            const imgs = albums[currentAlbumKey];
+            currentSlide = (currentSlide - 1 + imgs.length) % imgs.length;
+            updateSlide();
+        }
+
+        function updateSlide() {
+            const imgs = albums[currentAlbumKey];
+            const img = document.getElementById('modal-img');
+            const counter = document.getElementById('slide-counter');
+            img.src = imgs[currentSlide];
+            counter.innerText = `${currentSlide + 1} / ${imgs.length}`;
+        }
+
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            const logo = document.getElementById('logo');
+            const links = document.querySelectorAll('.nav-link');
+            const insta = document.getElementById('insta-link-main');
+            if (window.scrollY > 50) {
+                nav.classList.add('bg-white/95', 'py-4', 'shadow-sm', 'backdrop-blur-md');
+                nav.classList.remove('py-10');
+                logo.classList.replace('text-white', 'text-stone-900');
+                insta.classList.replace('text-white', 'text-stone-900');
+                links.forEach(l => l.classList.replace('text-white', 'text-stone-600'));
+            } else {
+                nav.classList.remove('bg-white/95', 'py-4', 'shadow-sm', 'backdrop-blur-md');
+                nav.classList.add('py-10');
+                logo.classList.replace('text-stone-900', 'text-white');
+                insta.classList.replace('text-stone-900', 'text-white');
+                links.forEach(l => l.classList.replace('text-stone-600', 'text-white'));
             }
         });
 
-        // Deletar
-        window.deleteEnsaio = async (id) => {
-            if (!confirm("Remover esta foto?")) return;
-            const appId = "site-fotografia-thamiris";
-            try {
-                await window.deleteDoc(window.doc(window.db, 'artifacts', appId, 'public', 'data', 'ensaios', id));
-            } catch (err) { console.error(err); }
-        };
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('nome').value;
+            const zap = document.getElementById('whatsapp').value;
+            const evento = document.getElementById('tipo-evento').value;
+            const texto = `Olá Souza e Laia! Me chamo ${nome}.\nGostaria de solicitar um orçamento para: *${evento}*.\n\nWhatsApp: ${zap}`;
+            window.open(`https://wa.me/5511993453280?text=${encodeURIComponent(texto)}`, '_blank');
+        });
 
-        // Login Admin
         window.promptAdmin = function() {
-            const pass = prompt("Senha Administrativa:");
+            const pass = prompt("Senha do Editor:");
             if (pass === "thamiris123") {
                 document.body.classList.add('is-admin');
-                localStorage.setItem('isAdmin', 'true');
                 lucide.createIcons();
-                window.scrollTo(0, 0); // Sobe para ver a barra admin
-            } else if (pass !== null) {
-                alert("Senha incorreta.");
             }
         }
 
         window.logoutAdmin = function() {
             document.body.classList.remove('is-admin');
-            localStorage.removeItem('isAdmin');
         }
 
-        // Scroll Navbar
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            const logo = document.getElementById('logo');
-            const links = document.querySelectorAll('.nav-link');
-            if (window.scrollY > 50) {
-                navbar.classList.add('bg-white/95', 'py-4', 'shadow-sm');
-                navbar.classList.remove('py-10');
-                logo.classList.add('text-stone-800');
-                links.forEach(l => l.classList.add('text-stone-600'));
-            } else {
-                navbar.classList.remove('bg-white/95', 'py-4', 'shadow-sm');
-                navbar.classList.add('py-10');
-                logo.classList.remove('text-stone-800');
-                links.forEach(l => l.classList.remove('text-stone-600'));
-            }
-        });
-
-        // WhatsApp
-        document.getElementById('contactForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const nome = document.getElementById('nome').value;
-            const msg = document.getElementById('mensagem').value;
-            window.open(`https://wa.me/5511993453280?text=Olá, sou ${nome}. ${msg}`, '_blank');
-        });
-
-        setTimeout(initApp, 1000);
+        window.onload = () => lucide.createIcons();
     </script>
 </body>
 </html>
