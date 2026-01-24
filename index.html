@@ -18,7 +18,6 @@
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         .font-serif { font-family: 'Playfair Display', serif; }
         
-        /* Admin UI */
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: block !important; }
         body.is-admin .admin-flex { display: flex !important; }
@@ -32,21 +31,24 @@
         #album-modal { display: none; }
         #album-modal.active { display: flex; }
 
-        .tech-card:hover i { color: #1c1917; transform: scale(1.1); transition: all 0.3s; }
-        
-        input, select {
-            background: transparent;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        /* Ajustes Modal Touch */
+        /* Estilização Modal */
         #modal-img {
-            touch-action: none; 
+            touch-action: pan-y pinch-zoom; 
             user-select: none;
             -webkit-user-drag: none;
+            max-width: 95vw;
         }
 
-        /* Botão X com destaque */
+        .nav-btn {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            padding: 10px;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:active { transform: scale(0.9); background: rgba(0, 0, 0, 0.6); }
+
         .close-btn {
             background-color: rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -110,6 +112,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <!-- Os álbuns permanecem com os links originais conforme solicitado -->
             <div onclick="openAlbum('casal')" class="cursor-pointer group relative aspect-[4/5] overflow-hidden bg-stone-100">
                 <img src="https://i.postimg.cc/G3j1gZDn/Whats-App-Image-2026-01-17-at-11-13-29-(9).jpg" class="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110">
                 <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center text-white">
@@ -156,29 +159,30 @@
     </section>
 
     <!-- Modal do Álbum -->
-    <div id="album-modal" class="fixed inset-0 z-[200] bg-black/98 items-center justify-center p-0 md:p-4 backdrop-blur-md">
-        <!-- Botão Fechar REFORÇADO -->
-        <button onclick="closeAlbum()" class="close-btn absolute top-6 right-6 text-white p-3 rounded-full transition-all z-[210] flex items-center justify-center">
+    <div id="album-modal" class="fixed inset-0 z-[200] bg-black/98 items-center justify-center backdrop-blur-md">
+        <!-- Botão Fechar -->
+        <button onclick="closeAlbum()" class="close-btn absolute top-6 right-6 text-white p-3 rounded-full z-[250] flex items-center justify-center">
             <i data-lucide="x" size="24"></i>
         </button>
         
-        <!-- Controles Desktop -->
-        <button onclick="prevSlide()" class="hidden md:block absolute left-4 md:left-8 text-white/50 hover:text-white transition-colors z-[210]">
-            <i data-lucide="chevron-left" size="50"></i>
+        <!-- Seta Esquerda -->
+        <button onclick="prevSlide()" class="nav-btn absolute left-4 text-white z-[250]">
+            <i data-lucide="chevron-left" class="w-8 h-8 md:w-12 md:h-12"></i>
         </button>
         
-        <div class="relative w-full h-full flex items-center justify-center overflow-hidden">
-            <img id="modal-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl transition-opacity duration-300 pointer-events-auto">
+        <div class="w-full h-full flex items-center justify-center px-4 overflow-hidden select-none">
+            <img id="modal-img" src="" class="max-h-[80vh] object-contain shadow-2xl transition-all duration-300">
         </div>
         
-        <button onclick="nextSlide()" class="hidden md:block absolute right-4 md:right-8 text-white/50 hover:text-white transition-colors z-[210]">
-            <i data-lucide="chevron-right" size="50"></i>
+        <!-- Seta Direita -->
+        <button onclick="nextSlide()" class="nav-btn absolute right-4 text-white z-[250]">
+            <i data-lucide="chevron-right" class="w-8 h-8 md:w-12 md:h-12"></i>
         </button>
         
-        <div class="absolute bottom-8 text-white/40 text-[10px] tracking-[0.5em] uppercase" id="slide-counter"></div>
+        <div class="absolute bottom-10 text-white/60 text-[10px] tracking-[0.5em] uppercase font-bold" id="slide-counter"></div>
     </div>
 
-    <!-- Trajetória -->
+    <!-- Trajetória (ATUALIZADA) -->
     <section id="trajetoria" class="py-32 bg-stone-50 overflow-hidden">
         <div class="max-w-7xl mx-auto px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
@@ -187,17 +191,17 @@
                         <img src="https://i.postimg.cc/5tqSY2qC/IMG-7807.jpg" alt="Thamiris e Felipe" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-10 -right-10 bg-white p-10 shadow-xl hidden md:block max-w-xs">
-                        <p class="text-[10px] uppercase tracking-[0.2em] leading-relaxed text-stone-400 font-bold italic">"Onde um olhar captura a alma, o outro lapida o momento."</p>
+                        <p class="text-[10px] uppercase tracking-[0.2em] leading-relaxed text-stone-400 font-bold italic">"Dois olhares apaixonados, uma única lente dividindo o mundo."</p>
                     </div>
                 </div>
                 <div class="space-y-10">
-                    <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Sobre Nós</span>
-                    <h2 class="text-5xl md:text-7xl font-serif italic leading-tight">A Arte de Dois <br> <span class="text-stone-300 not-italic">Olhares</span></h2>
+                    <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Nossa História</span>
+                    <h2 class="text-5xl md:text-7xl font-serif italic leading-tight">Um Equipamento, <br> <span class="text-stone-300 not-italic">Duas Almas</span></h2>
                     <div class="space-y-8 text-stone-600 font-light leading-relaxed text-lg">
-                        <p>A <strong>Souza & Laia Art Photography</strong> é o resultado da fusão entre técnica e sensibilidade. Nossa dinâmica de trabalho é o que torna cada entrega única e autêntica.</p>
-                        <p><strong>Thamiris Souza</strong> é a responsável pela captura das imagens. Com a câmera em mãos, ela busca a luz perfeita e o instante decisivo, transformando sentimentos invisíveis em registros tangíveis.</p>
-                        <p><strong>Felipe Laia</strong> atua no coração da cena, focando na direção de poses, no ajuste minucioso de cada detalhe e na composição artística. Ele garante que cada elemento esteja em harmonia para que a fotografia transcenda o clique.</p>
-                        <p>Juntos, acreditamos que a fotografia não é sobre o que vemos, mas sobre o que sentimos. Criamos uma experiência onde você se sente à vontade para ser quem realmente é.</p>
+                        <p>A <strong>Souza & Laia Art Photography</strong> nasceu de um sonho compartilhado e de uma paixão que transborda. Nós não somos apenas uma dupla; somos parceiros que encontraram na fotografia a forma mais pura de expressão.</p>
+                        <p>Diferente de grandes equipes, aqui o trabalho é íntimo. <strong>Nós dois somos fotógrafos</strong> e trabalhamos de forma alternada com o mesmo equipamento. Enquanto um observa a cena e direciona a luz ou o posicionamento, o outro opera a câmera, trocando de lugar constantemente para garantir que nenhum detalhe escape.</p>
+                        <p>Essa dinâmica de <strong>"uma câmera e dois olhares"</strong> nos obriga a estar em total sintonia. Quando um clica, o outro já está antecipando o próximo movimento, o próximo sorriso ou aquela lágrima que está prestes a cair.</p>
+                        <p>Acreditamos que essa simplicidade técnica focada na nossa conexão pessoal é o que traz a verdade para as nossas fotos. Não é sobre ter dezenas de acessórios, mas sobre como nós dois usamos o que temos para contar a sua história.</p>
                     </div>
                 </div>
             </div>
@@ -208,35 +212,35 @@
     <section id="tecnologia" class="py-32 bg-white">
         <div class="max-w-7xl mx-auto px-8">
             <div class="text-center mb-24">
-                <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">Hardware</span>
-                <h2 class="text-5xl font-serif mt-4 italic">Excelência Técnica</h2>
+                <span class="text-stone-400 text-xs uppercase tracking-[0.4em]">O que usamos</span>
+                <h2 class="text-5xl font-serif mt-4 italic">Essencial & Poderoso</h2>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-16 items-center">
                 <div class="space-y-16 text-right">
-                    <div class="space-y-4 tech-card">
-                        <i data-lucide="camera" class="ml-auto text-stone-300 transition-colors" size="32"></i>
-                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Sensores Full Frame</h4>
-                        <p class="text-stone-400 text-xs font-light">Performance impecável em qualquer luz.</p>
+                    <div class="space-y-4">
+                        <i data-lucide="camera" class="ml-auto text-stone-300" size="32"></i>
+                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Nossa Câmera</h4>
+                        <p class="text-stone-400 text-xs font-light">Sensor de ponta para cores vibrantes.</p>
                     </div>
-                    <div class="space-y-4 tech-card">
-                        <i data-lucide="zap" class="ml-auto text-stone-300 transition-colors" size="32"></i>
-                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Foco Instantâneo</h4>
-                        <p class="text-stone-400 text-xs font-light">Capturando a emoção no milissegundo exato.</p>
+                    <div class="space-y-4">
+                        <i data-lucide="heart" class="ml-auto text-stone-300" size="32"></i>
+                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Sintonia</h4>
+                        <p class="text-stone-400 text-xs font-light">Alternando funções para o clique perfeito.</p>
                     </div>
                 </div>
                 <div class="relative">
                     <img src="https://i.postimg.cc/dQdNwwg9/Canon-EOS-R100-by-Henry-Soderlund.jpg" class="w-full drop-shadow-2xl">
                 </div>
                 <div class="space-y-16 text-left">
-                    <div class="space-y-4 tech-card">
-                        <i data-lucide="maximize" class="text-stone-300 transition-colors" size="32"></i>
-                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Lentes de Alta Nitidez</h4>
-                        <p class="text-stone-400 text-xs font-light">Desfoque artístico e detalhes cristalinos.</p>
+                    <div class="space-y-4">
+                        <i data-lucide="maximize" class="text-stone-300" size="32"></i>
+                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Lentes Fixas</h4>
+                        <p class="text-stone-400 text-xs font-light">Foco no que realmente importa: você.</p>
                     </div>
-                    <div class="space-y-4 tech-card">
-                        <i data-lucide="shield-check" class="text-stone-300 transition-colors" size="32"></i>
-                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Backup Duplo</h4>
-                        <p class="text-stone-400 text-xs font-light">Seus momentos protegidos em tempo real.</p>
+                    <div class="space-y-4">
+                        <i data-lucide="shield-check" class="text-stone-300" size="32"></i>
+                        <h4 class="text-[10px] uppercase font-bold tracking-widest">Segurança</h4>
+                        <p class="text-stone-400 text-xs font-light">Seus registros salvos em cartões duplos.</p>
                     </div>
                 </div>
             </div>
@@ -251,21 +255,11 @@
                 <form id="contactForm" class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="space-y-2">
                         <label class="text-[9px] uppercase font-bold text-stone-400 tracking-widest">Nome</label>
-                        <input required id="nome" class="w-full py-3 outline-none focus:border-stone-900 transition-colors">
+                        <input required id="nome" class="w-full py-3 outline-none border-b border-stone-200 focus:border-stone-900 transition-colors">
                     </div>
                     <div class="space-y-2">
                         <label class="text-[9px] uppercase font-bold text-stone-400 tracking-widest">WhatsApp</label>
-                        <input required id="whatsapp" class="w-full py-3 outline-none focus:border-stone-900 transition-colors">
-                    </div>
-                    <div class="space-y-2 md:col-span-2">
-                        <label class="text-[9px] uppercase font-bold text-stone-400 tracking-widest">Tipo de Trabalho</label>
-                        <select id="tipo-trabalho" class="w-full py-3 outline-none bg-white cursor-pointer">
-                            <option>Ensaio de Casal</option>
-                            <option>O Mundo da Isa (Kids)</option>
-                            <option>Retratos Externos</option>
-                            <option>Eventos Sociais / Jantar</option>
-                            <option>Gastronomia</option>
-                        </select>
+                        <input required id="whatsapp" class="w-full py-3 outline-none border-b border-stone-200 focus:border-stone-900 transition-colors">
                     </div>
                     <button type="submit" class="md:col-span-2 bg-stone-900 text-white py-6 text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-black transition-all">Enviar via WhatsApp</button>
                 </form>
@@ -280,7 +274,7 @@
     </footer>
 
     <script>
-        // Álbuns (mantidos conforme original)
+        // Dados dos álbuns
         const albums = {
             casal: [
                 "https://i.postimg.cc/G3j1gZDn/Whats-App-Image-2026-01-17-at-11-13-29-(9).jpg",
@@ -349,44 +343,28 @@
 
         let currentKey = 'casal';
         let currentIndex = 0;
-        let touchStartX = 0;
-        let touchEndX = 0;
-        let isNavigating = false; // Trava para evitar múltiplos pulos
+        let startX = 0;
+        let isChanging = false;
 
         function openAlbum(key) {
             currentKey = key;
             currentIndex = 0;
             updateModal();
-            document.getElementById('album-modal').classList.add('active');
+            const modal = document.getElementById('album-modal');
+            modal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            
+
+            // Registro de Swipe
             const modalImg = document.getElementById('modal-img');
-            
-            // Touch Start - Registra posição inicial
-            modalImg.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].clientX;
-            }, {passive: true});
-            
-            // Touch End - Compara com a final
+            modalImg.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, {passive: true});
             modalImg.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].clientX;
-                handleSwipe();
+                const endX = e.changedTouches[0].clientX;
+                const diff = startX - endX;
+                if (Math.abs(diff) > 50) { // Threshold de 50px
+                    if (diff > 0) nextSlide(); // Swipe esquerda -> Próxima
+                    else prevSlide(); // Swipe direita -> Anterior
+                }
             }, {passive: true});
-        }
-
-        function handleSwipe() {
-            if (isNavigating) return; // Se já estiver mudando, ignora
-            
-            const swipeDistance = touchEndX - touchStartX;
-            const threshold = 60; // Distância mínima para validar o arrastar
-
-            if (swipeDistance < -threshold) {
-                // Arrastou para a esquerda (próxima)
-                nextSlide();
-            } else if (swipeDistance > threshold) {
-                // Arrastou para a direita (anterior)
-                prevSlide();
-            }
         }
 
         function closeAlbum() {
@@ -395,34 +373,30 @@
         }
 
         function nextSlide() {
-            if (isNavigating) return;
-            isNavigating = true;
-            
-            const img = document.getElementById('modal-img');
-            img.style.opacity = "0";
-            
-            setTimeout(() => {
-                currentIndex = (currentIndex + 1) % albums[currentKey].length;
-                updateModal();
-                img.style.opacity = "1";
-                // Libera navegação após a transição
-                setTimeout(() => { isNavigating = false; }, 200);
-            }, 150);
+            if (isChanging) return;
+            isChanging = true;
+            currentIndex = (currentIndex + 1) % albums[currentKey].length;
+            animateAndChange();
         }
 
         function prevSlide() {
-            if (isNavigating) return;
-            isNavigating = true;
+            if (isChanging) return;
+            isChanging = true;
+            currentIndex = (currentIndex - 1 + albums[currentKey].length) % albums[currentKey].length;
+            animateAndChange();
+        }
 
+        function animateAndChange() {
             const img = document.getElementById('modal-img');
-            img.style.opacity = "0";
+            img.style.opacity = '0';
+            img.style.transform = 'scale(0.98)';
             
             setTimeout(() => {
-                currentIndex = (currentIndex - 1 + albums[currentKey].length) % albums[currentKey].length;
                 updateModal();
-                img.style.opacity = "1";
-                setTimeout(() => { isNavigating = false; }, 200);
-            }, 150);
+                img.style.opacity = '1';
+                img.style.transform = 'scale(1)';
+                setTimeout(() => { isChanging = false; }, 300);
+            }, 200);
         }
 
         function updateModal() {
@@ -432,27 +406,7 @@
             counter.innerText = `${currentIndex + 1} / ${albums[currentKey].length}`;
         }
 
-        // Instagram e Editor
-        const savedInsta = localStorage.getItem('insta_url') || "https://www.instagram.com/souzaelaia.artphotography/";
-        document.getElementById('insta-link-main').href = savedInsta;
-        document.getElementById('admin-insta-url').value = savedInsta;
-
-        function saveInstaUrl() {
-            const url = document.getElementById('admin-insta-url').value;
-            localStorage.setItem('insta_url', url);
-            document.getElementById('insta-link-main').href = url;
-            alert("Instagram atualizado!");
-        }
-
-        function promptAdmin() {
-            if (prompt("Senha do Editor:") === "thamiris123") {
-                document.body.classList.add('is-admin');
-                lucide.createIcons();
-            }
-        }
-
-        function logoutAdmin() { document.body.classList.remove('is-admin'); }
-
+        // Navegação Navbar
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('navbar');
             const logo = document.getElementById('logo');
@@ -462,22 +416,32 @@
                 nav.classList.add('bg-white/95', 'py-4', 'shadow-sm');
                 nav.classList.remove('py-10');
                 logo.classList.replace('text-white', 'text-stone-900');
-                insta.classList.replace('text-white', 'text-stone-900');
+                insta?.classList.replace('text-white', 'text-stone-900');
                 links.forEach(l => l.classList.replace('text-white', 'text-stone-600'));
             } else {
                 nav.classList.remove('bg-white/95', 'py-4', 'shadow-sm');
                 nav.classList.add('py-10');
                 logo.classList.replace('text-stone-900', 'text-white');
-                insta.classList.replace('text-stone-900', 'text-white');
+                insta?.classList.replace('text-stone-900', 'text-white');
                 links.forEach(l => l.classList.replace('text-stone-600', 'text-white'));
             }
         });
 
+        // Contato
         document.getElementById('contactForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const msg = `Olá Souza e Laia! Me chamo ${document.getElementById('nome').value}. Gostaria de um orçamento para: ${document.getElementById('tipo-trabalho').value}`;
+            const msg = `Olá Souza e Laia! Me chamo ${document.getElementById('nome').value}. Gostaria de solicitar um orçamento para fotos.`;
             window.open(`https://wa.me/5511993453280?text=${encodeURIComponent(msg)}`, '_blank');
         });
+
+        // Admin Simples
+        function promptAdmin() {
+            if (prompt("Senha do Editor:") === "souzaelaia") {
+                document.body.classList.add('is-admin');
+                lucide.createIcons();
+            }
+        }
+        function logoutAdmin() { document.body.classList.remove('is-admin'); }
 
         window.onload = () => lucide.createIcons();
     </script>
