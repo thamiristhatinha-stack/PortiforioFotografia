@@ -38,6 +38,12 @@
             background: transparent;
             border-bottom: 1px solid #e5e7eb;
         }
+
+        /* Ajustes Modal Touch */
+        #modal-img {
+            touch-action: none; /* Previne scroll da página enquanto arrasta a foto */
+            user-select: none;
+        }
     </style>
 </head>
 <body class="bg-white text-stone-900 overflow-x-hidden">
@@ -143,16 +149,31 @@
 
     <!-- Modal do Álbum -->
     <div id="album-modal" class="fixed inset-0 z-[200] bg-black/98 items-center justify-center p-4 backdrop-blur-md">
-        <button onclick="closeAlbum()" class="absolute top-8 right-8 text-white/50 hover:text-white transition-colors z-[210]"><i data-lucide="x" size="40"></i></button>
-        <button onclick="prevSlide()" class="absolute left-4 md:left-8 text-white/50 hover:text-white transition-colors z-[210]"><i data-lucide="chevron-left" size="50"></i></button>
-        <div class="relative w-full h-full flex items-center justify-center pointer-events-none">
-            <img id="modal-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl pointer-events-auto">
+        <!-- Botão Fechar Mais Visível -->
+        <button onclick="closeAlbum()" class="absolute top-6 right-6 md:top-8 md:right-8 text-white bg-black/40 p-3 rounded-full hover:bg-black/60 transition-all z-[210]">
+            <i data-lucide="x" size="28"></i>
+        </button>
+        
+        <!-- Controles Desktop -->
+        <button onclick="prevSlide()" class="hidden md:block absolute left-4 md:left-8 text-white/50 hover:text-white transition-colors z-[210]">
+            <i data-lucide="chevron-left" size="50"></i>
+        </button>
+        
+        <div class="relative w-full h-full flex items-center justify-center">
+            <img id="modal-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl transition-opacity duration-300">
         </div>
-        <button onclick="nextSlide()" class="absolute right-4 md:right-8 text-white/50 hover:text-white transition-colors z-[210]"><i data-lucide="chevron-right" size="50"></i></button>
+        
+        <button onclick="nextSlide()" class="hidden md:block absolute right-4 md:right-8 text-white/50 hover:text-white transition-colors z-[210]">
+            <i data-lucide="chevron-right" size="50"></i>
+        </button>
+        
         <div class="absolute bottom-8 text-white/40 text-[10px] tracking-[0.5em] uppercase" id="slide-counter"></div>
+        
+        <!-- Dica de Swipe no Celular -->
+        <div class="md:hidden absolute bottom-20 text-white/20 text-[8px] uppercase tracking-widest">Arraste para o lado</div>
     </div>
 
-    <!-- Trajetória (Ajustada para Thamiris na câmera e Felipe nos detalhes/poses) -->
+    <!-- Trajetória -->
     <section id="trajetoria" class="py-32 bg-stone-50 overflow-hidden">
         <div class="max-w-7xl mx-auto px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
@@ -323,6 +344,8 @@
 
         let currentKey = 'casal';
         let currentIndex = 0;
+        let touchStartX = 0;
+        let touchEndX = 0;
 
         function openAlbum(key) {
             currentKey = key;
@@ -330,6 +353,26 @@
             updateModal();
             document.getElementById('album-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
+            
+            // Setup Swipe
+            const modalImg = document.getElementById('modal-img');
+            modalImg.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+            
+            modalImg.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, {passive: true});
+        }
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            if (touchEndX < touchStartX - swipeThreshold) {
+                nextSlide(); // Swipe esquerda -> Próxima
+            } else if (touchEndX > touchStartX + swipeThreshold) {
+                prevSlide(); // Swipe direita -> Anterior
+            }
         }
 
         function closeAlbum() {
@@ -338,13 +381,23 @@
         }
 
         function nextSlide() {
-            currentIndex = (currentIndex + 1) % albums[currentKey].length;
-            updateModal();
+            const img = document.getElementById('modal-img');
+            img.style.opacity = "0";
+            setTimeout(() => {
+                currentIndex = (currentIndex + 1) % albums[currentKey].length;
+                updateModal();
+                img.style.opacity = "1";
+            }, 150);
         }
 
         function prevSlide() {
-            currentIndex = (currentIndex - 1 + albums[currentKey].length) % albums[currentKey].length;
-            updateModal();
+            const img = document.getElementById('modal-img');
+            img.style.opacity = "0";
+            setTimeout(() => {
+                currentIndex = (currentIndex - 1 + albums[currentKey].length) % albums[currentKey].length;
+                updateModal();
+                img.style.opacity = "1";
+            }, 150);
         }
 
         function updateModal() {
@@ -405,7 +458,6 @@
     </script>
 </body>
 </html>
-
 
 
 
