@@ -41,8 +41,16 @@
 
         /* Ajustes Modal Touch */
         #modal-img {
-            touch-action: none; /* Previne scroll da página enquanto arrasta a foto */
+            touch-action: none; 
             user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        /* Botão X com destaque */
+        .close-btn {
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -148,10 +156,10 @@
     </section>
 
     <!-- Modal do Álbum -->
-    <div id="album-modal" class="fixed inset-0 z-[200] bg-black/98 items-center justify-center p-4 backdrop-blur-md">
-        <!-- Botão Fechar Mais Visível -->
-        <button onclick="closeAlbum()" class="absolute top-6 right-6 md:top-8 md:right-8 text-white bg-black/40 p-3 rounded-full hover:bg-black/60 transition-all z-[210]">
-            <i data-lucide="x" size="28"></i>
+    <div id="album-modal" class="fixed inset-0 z-[200] bg-black/98 items-center justify-center p-0 md:p-4 backdrop-blur-md">
+        <!-- Botão Fechar REFORÇADO -->
+        <button onclick="closeAlbum()" class="close-btn absolute top-6 right-6 text-white p-3 rounded-full transition-all z-[210] flex items-center justify-center">
+            <i data-lucide="x" size="24"></i>
         </button>
         
         <!-- Controles Desktop -->
@@ -159,8 +167,8 @@
             <i data-lucide="chevron-left" size="50"></i>
         </button>
         
-        <div class="relative w-full h-full flex items-center justify-center">
-            <img id="modal-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl transition-opacity duration-300">
+        <div class="relative w-full h-full flex items-center justify-center overflow-hidden">
+            <img id="modal-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl transition-opacity duration-300 pointer-events-auto">
         </div>
         
         <button onclick="nextSlide()" class="hidden md:block absolute right-4 md:right-8 text-white/50 hover:text-white transition-colors z-[210]">
@@ -168,9 +176,6 @@
         </button>
         
         <div class="absolute bottom-8 text-white/40 text-[10px] tracking-[0.5em] uppercase" id="slide-counter"></div>
-        
-        <!-- Dica de Swipe no Celular -->
-        <div class="md:hidden absolute bottom-20 text-white/20 text-[8px] uppercase tracking-widest">Arraste para o lado</div>
     </div>
 
     <!-- Trajetória -->
@@ -275,7 +280,7 @@
     </footer>
 
     <script>
-        // Dados dos Álbuns
+        // Álbuns (mantidos conforme original)
         const albums = {
             casal: [
                 "https://i.postimg.cc/G3j1gZDn/Whats-App-Image-2026-01-17-at-11-13-29-(9).jpg",
@@ -346,6 +351,7 @@
         let currentIndex = 0;
         let touchStartX = 0;
         let touchEndX = 0;
+        let isNavigating = false; // Trava para evitar múltiplos pulos
 
         function openAlbum(key) {
             currentKey = key;
@@ -354,24 +360,32 @@
             document.getElementById('album-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
             
-            // Setup Swipe
             const modalImg = document.getElementById('modal-img');
+            
+            // Touch Start - Registra posição inicial
             modalImg.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
+                touchStartX = e.changedTouches[0].clientX;
             }, {passive: true});
             
+            // Touch End - Compara com a final
             modalImg.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].screenX;
+                touchEndX = e.changedTouches[0].clientX;
                 handleSwipe();
             }, {passive: true});
         }
 
         function handleSwipe() {
-            const swipeThreshold = 50;
-            if (touchEndX < touchStartX - swipeThreshold) {
-                nextSlide(); // Swipe esquerda -> Próxima
-            } else if (touchEndX > touchStartX + swipeThreshold) {
-                prevSlide(); // Swipe direita -> Anterior
+            if (isNavigating) return; // Se já estiver mudando, ignora
+            
+            const swipeDistance = touchEndX - touchStartX;
+            const threshold = 60; // Distância mínima para validar o arrastar
+
+            if (swipeDistance < -threshold) {
+                // Arrastou para a esquerda (próxima)
+                nextSlide();
+            } else if (swipeDistance > threshold) {
+                // Arrastou para a direita (anterior)
+                prevSlide();
             }
         }
 
@@ -381,22 +395,33 @@
         }
 
         function nextSlide() {
+            if (isNavigating) return;
+            isNavigating = true;
+            
             const img = document.getElementById('modal-img');
             img.style.opacity = "0";
+            
             setTimeout(() => {
                 currentIndex = (currentIndex + 1) % albums[currentKey].length;
                 updateModal();
                 img.style.opacity = "1";
+                // Libera navegação após a transição
+                setTimeout(() => { isNavigating = false; }, 200);
             }, 150);
         }
 
         function prevSlide() {
+            if (isNavigating) return;
+            isNavigating = true;
+
             const img = document.getElementById('modal-img');
             img.style.opacity = "0";
+            
             setTimeout(() => {
                 currentIndex = (currentIndex - 1 + albums[currentKey].length) % albums[currentKey].length;
                 updateModal();
                 img.style.opacity = "1";
+                setTimeout(() => { isNavigating = false; }, 200);
             }, 150);
         }
 
@@ -458,6 +483,7 @@
     </script>
 </body>
 </html>
+
 
 
 
